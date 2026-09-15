@@ -106,21 +106,24 @@ function AboutSettingsPage() {
                     <CardDescription>Brought to you by ItsTauTvyDas! Listen to music freely without any pressure from the ads!</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <FieldGroup>
+                    <FieldGroup className="flex-row flex-wrap items-center">
                         <Button
                             variant="outline"
-                            render={
-                                <a
-                                    href="https://github.com/ItsTauTvyDas/ytmdesktop2-adless"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                />
-                            }
+                            onClick={() => window.open("https://github.com/ItsTauTvyDas/ytmdesktop2-adless", "_blank")}
                         >
                             <span data-icon="inline-end">
                                 <RiGithubLine/>
                             </span>
                             ItsTauTvyDas
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => window.open("https://github.com/Venipa/ytmdesktop2", "_blank")}
+                        >
+                            <span data-icon="inline-end">
+                                <RiGithubLine/>
+                            </span>
+                            Venipa
                         </Button>
                     </FieldGroup>
                 </CardContent>
