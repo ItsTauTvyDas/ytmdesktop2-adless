@@ -1,8 +1,12 @@
 {
 	"name": "ytmdesktop2-workspace",
-	"version": "0.0.0",
+	"version": "1.8.1-adless",
 	"private": true,
-	"author": "Venipa <admin@venipa.net>",
+    "author": "Venipa <admin@venipa.net>",
+    "contributors": [
+      "Venipa <admin@venipa.net>",
+      "ItsTauTvyDas <personal@itstautvydas.me> (fork maintainer)"
+    ],
 	"homepage": "https://youtube-music.app",
 	"description": "Unofficial YouTube Music Desktop App for Windows, Mac and Linux | Monorepo",
 	"scripts": {
