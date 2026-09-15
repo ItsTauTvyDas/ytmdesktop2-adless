@@ -1,8 +1,8 @@
 import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
-import { isAppQuitting, shouldCancelWindowClose } from "@main/handlers/quitPolicy";
 import { showOnActiveDesktop } from "@main/domain/showOnActiveDesktop";
 import { positionNearTray } from "@main/domain/trayPosition";
+import { isAppQuitting, shouldCancelWindowClose } from "@main/handlers/quitPolicy";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import TrayProvider from "@main/trpc/routers/tray/service";
 import { createAppWindow, wrapWindowHandler } from "@main/windows/windowUtils";
@@ -191,10 +191,12 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 				visibleOnFullScreen: true,
 				skipTransformProcessType: true,
 			});
+            win.setSkipTaskbar(true);
 		} else {
 			win.setSkipTaskbar(true);
 			win.setVisibleOnAllWorkspaces(false);
 			win.setAlwaysOnTop(true, "pop-up-menu");
+            win.setSkipTaskbar(false);
 		}
 	}
 
