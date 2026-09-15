@@ -1,9 +1,9 @@
 import { applyYoutubeZoom, bindYoutubeWebContents, TOOLBAR_HEIGHT } from "@main/domain/uiZoom";
-import { getLifecycleContext } from "@main/lifecycle";
-import { chromecastArgvFor, CHROMECAST_SETTING_KEY } from "@shared/chromecast/flag";
 import { defaultUrl, isDevelopment, isProdDebug, isProduction } from "@main/infra/devUtils";
 import { toChromeUserAgent } from "@main/infra/userAgent";
 import { serverMain } from "@main/ipc/serverEvents";
+import { getLifecycleContext } from "@main/lifecycle";
+import { CHROMECAST_SETTING_KEY, chromecastArgvFor } from "@shared/chromecast/flag";
 import { logger } from "@shared/utils/console";
 import translations from "@translations/index";
 import { app, BrowserWindow, BrowserWindowConstructorOptions, WebContentsView } from "electron";
@@ -14,6 +14,7 @@ import { createWindowContext } from "./mappedWindow";
 import { createApiView, createView, googleLoginPopup } from "./view";
 import { pushWindowStates } from "./webContentUtils";
 import { getBoundsWithScaleFactor, wrapWindowHandler } from "./windowUtils";
+
 function isChromecastSettingEnabled(): boolean {
 	try {
 		const settings = getLifecycleContext().getProvider("settings") as { get?: (key: string, fallback?: boolean) => boolean };
@@ -339,6 +340,15 @@ export class WindowManager {
 		// callWindowListeners(this.mainWindow, "will-resize", state);
 		serverMain.emit("app.loadStart");
 		logger.debug("windowState", this.mainWindow.getBounds());
+
+		try {
+			const adblocker = getLifecycleContext().getProvider("adblocker") as {
+				attachToYoutubeView?: (view?: WebContentsView) => boolean;
+			} | null;
+			adblocker?.attachToYoutubeView?.(this.views.youtubeView);
+		} catch (err) {
+			logger.warn("adblocker attach before loadURL failed", err);
+		}
 
 		await this.views.youtubeView.webContents.loadURL(defaultUrl).then(() => {
 			if (isDevelopment || isProdDebug) {

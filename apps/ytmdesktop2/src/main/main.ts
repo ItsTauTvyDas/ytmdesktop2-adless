@@ -19,6 +19,46 @@ import "@main/trpc/routers/track";
 initializeCustomElectronEnvironment();
 const log = logger.child("main");
 
+protocol.registerSchemesAsPrivileged([
+	{ scheme: "app", privileges: { secure: true, standard: true } },
+	{
+		scheme: "ytmd-thumb",
+		privileges: {
+			standard: true,
+			secure: true,
+			supportFetchAPI: true,
+			corsEnabled: true,
+			stream: true,
+			bypassCSP: true,
+		},
+	},
+	{
+		scheme: "http",
+		privileges: {
+			standard: true,
+			bypassCSP: true,
+			allowServiceWorkers: true,
+			supportFetchAPI: true,
+			corsEnabled: true,
+			stream: true,
+			codeCache: true,
+		},
+	},
+	{
+		scheme: "https",
+		privileges: {
+			standard: true,
+			bypassCSP: true,
+			allowServiceWorkers: true,
+			supportFetchAPI: true,
+			corsEnabled: true,
+			stream: true,
+			codeCache: true,
+		},
+	},
+	{ scheme: "mailto", privileges: { standard: true } },
+]);
+
 const runApp = async function () {
 	const serviceCollection = await createServiceCollection(app),
 		eventCollection = await createEventCollection(app, serviceCollection.getItems());
@@ -41,45 +81,6 @@ const runApp = async function () {
 		log.error(ex); // before start can be ignored, experimental
 	}
 
-	protocol.registerSchemesAsPrivileged([
-		{ scheme: "app", privileges: { secure: true, standard: true } },
-		{
-			scheme: "ytmd-thumb",
-			privileges: {
-				standard: true,
-				secure: true,
-				supportFetchAPI: true,
-				corsEnabled: true,
-				stream: true,
-				bypassCSP: true,
-			},
-		},
-		{
-			scheme: "http",
-			privileges: {
-				standard: true,
-				bypassCSP: true,
-				allowServiceWorkers: true,
-				supportFetchAPI: true,
-				corsEnabled: true,
-				stream: true,
-				codeCache: true,
-			},
-		},
-		{
-			scheme: "https",
-			privileges: {
-				standard: true,
-				bypassCSP: true,
-				allowServiceWorkers: true,
-				supportFetchAPI: true,
-				corsEnabled: true,
-				stream: true,
-				codeCache: true,
-			},
-		},
-		{ scheme: "mailto", privileges: { standard: true } },
-	]);
 	const windowManager = new WindowManager();
 	let mainWindow: ReturnType<typeof windowManager.createRootWindow> extends Promise<infer T> ? T : never;
 
@@ -105,7 +106,8 @@ const runApp = async function () {
 	};
 
 	app.on("activate", reactivate); // runs when the app is activated (e.g. when the app is brought back from the background)
-	app.on("ready", async () => {
+	// whenReady (not on("ready")) — BeforeStart can outlast the ready event (adblocker lists).
+	void app.whenReady().then(async () => {
 		thumbnailCache.registerProtocol();
 		await waitMs(); // next tick
 		mainWindow = await windowManager.createRootWindow();

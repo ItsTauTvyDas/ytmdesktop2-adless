@@ -13,6 +13,7 @@ import {
 	RiLiveLine,
 	RiMusic2Line,
 	RiPaletteLine,
+	RiPuzzleLine,
 	RiQrCodeLine,
 	RiServerLine,
 	RiSettings3Line,
@@ -54,6 +55,7 @@ const tabs = {
 	discord: { to: "/discord", label: "Discord", icon: RiDiscordLine },
 	lastfm: { to: "/lastfm", label: "Last.fm", icon: RiAlbumLine },
 	about: { to: "/about", label: "About", icon: RiInformationLine },
+	extensions: { to: "/extensions", label: "Extensions", icon: RiPuzzleLine },
 } as const;
 
 const playerSubs = [
@@ -281,6 +283,7 @@ function SettingsLayout() {
 									<SettingsNavItem {...tabs.discord} />
 									<SettingsNavItem {...tabs.lastfm} />
 									<ApiIntegrationsNav />
+									<SettingsNavItem {...tabs.extensions} />
 									<SettingsNavItem {...tabs.about} />
 								</SidebarMenu>
 							</SidebarGroupContent>

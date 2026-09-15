@@ -41,6 +41,14 @@ const defaultSettings = {
 		enabled: true,
 		volume: 0.05,
 	},
+	adblocker: {
+		enabled: true,
+	},
+	plugins: {
+		"youtube-non-stop": {
+			enabled: true,
+		},
+	},
 	lyrics: {
 		enabled: false,
 		showTimeCodes: false,
@@ -89,6 +97,7 @@ export type SettingsStore = typeof defaultSettings & {
 	__meta?: { migratedFromJson?: boolean };
 	plugins?: {
 		bypass_age_restrictions?: { enabled: boolean };
+		"youtube-non-stop"?: { enabled: boolean };
 	};
 };
 
