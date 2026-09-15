@@ -1,5 +1,5 @@
 > [!NOTE]
-> <b>We hit 1000 Stars, thanks for your continued support ♥️</b>
+> <b>We hit 1000 Stars (original repository), thanks for your continued support ♥️</b>
 >
 > I've never imagined that a personal project for my one use would become that large :)
 >
@@ -7,7 +7,7 @@
 > stay tuned for new planned features ♥️
 
 <h2 align="center">
-    Youtube Music for Desktop (ytmdesktop2)
+    Youtube Music for Desktop (ytmdesktop2, forked)
 </h2>
 
 <p align="center">
@@ -19,12 +19,31 @@ Beautiful Youtube Music desktop app with customizations for users and developers
 </p>
 
 <p align="center">
+  <img alt="Original repo" src="https://img.shields.io/badge/Venipa/ytmdesktop2-blue?style=for-the-badge">
+  <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Venipa/ytmdesktop2?style=for-the-badge">
   <a href="https://discord.gg/dq4bZMhMjT"><img alt="Discord" src="https://img.shields.io/discord/834826233195003944?color=%237289DA&label=discord&logo=discord&logoColor=%23ffffff&style=for-the-badge" /></a>
   <a href="https://github.com/Venipa/ytmdesktop2/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/Venipa/ytmdesktop2?style=for-the-badge" /></a>
   <img alt="Last commit" src="https://img.shields.io/github/last-commit/Venipa/ytmdesktop2?style=for-the-badge" />
+  <br>
+  <img alt="Original repo" src="https://img.shields.io/badge/ItsTauTvyDas/ytmdesktop2--adless-blue?style=for-the-badge">
+  <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/ItsTauTvyDas/ytmdesktop2-adless?style=for-the-badge">
+  <a href="https://github.com/ItsTauTvyDas/ytmdesktop2-adless/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/ItsTauTvyDas/ytmdesktop2-adless?style=for-the-badge" /></a>
+  <img alt="Last commit" src="https://img.shields.io/github/last-commit/ItsTauTvyDas/ytmdesktop2-adless?style=for-the-badge" />
 </p>
 
 ## Features
+
+### Extensions <sup>_fork exclusive_</sup>
+
+#### Adblock
+
+Skips ads automatically, powered by [YoutubeNonStop](https://github.com/lawfx/YoutubeNonStop/).
+
+#### Non-stop listening experience
+
+Auto-continues playback past "Video paused. Continue watching?" and similar interruptions, powered by [YoutubeNonStop](https://github.com/lawfx/YoutubeNonStop/).
+
+<img width="788" height="388" alt="image" src="https://github.com/user-attachments/assets/9f91da35-b85b-456c-b563-c0ee5bbc25c3" />
 
 ### Last.fm
 
@@ -35,6 +54,13 @@ Scrobble and update Now Playing while you listen.
 ### Tray view
 
 Compact now-playing popup from the system tray.
+
+<details>
+  <summary>Modification<sup><i>fork exclusive</i></sup></summary>
+    
+  > This fork also makes the app's icon hidden from taskbar when pinned on top!
+
+</details>
 
 ![Tray view](./apps/docs/public/images/features-trayview.png)
 
