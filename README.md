@@ -20,12 +20,14 @@ Beautiful Youtube Music desktop app with customizations for users and developers
 
 <p align="center">
   <img alt="Original repo" src="https://img.shields.io/badge/Venipa/ytmdesktop2-blue?style=for-the-badge">
+  <br>
   <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Venipa/ytmdesktop2?style=for-the-badge">
   <a href="https://discord.gg/dq4bZMhMjT"><img alt="Discord" src="https://img.shields.io/discord/834826233195003944?color=%237289DA&label=discord&logo=discord&logoColor=%23ffffff&style=for-the-badge" /></a>
   <a href="https://github.com/Venipa/ytmdesktop2/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/Venipa/ytmdesktop2?style=for-the-badge" /></a>
   <img alt="Last commit" src="https://img.shields.io/github/last-commit/Venipa/ytmdesktop2?style=for-the-badge" />
-  <br>
+  <br><br>
   <img alt="Original repo" src="https://img.shields.io/badge/ItsTauTvyDas/ytmdesktop2--adless-blue?style=for-the-badge">
+  <br>
   <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/ItsTauTvyDas/ytmdesktop2-adless?style=for-the-badge">
   <a href="https://github.com/ItsTauTvyDas/ytmdesktop2-adless/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/ItsTauTvyDas/ytmdesktop2-adless?style=for-the-badge" /></a>
   <img alt="Last commit" src="https://img.shields.io/github/last-commit/ItsTauTvyDas/ytmdesktop2-adless?style=for-the-badge" />
