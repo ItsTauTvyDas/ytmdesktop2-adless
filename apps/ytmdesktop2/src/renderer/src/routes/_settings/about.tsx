@@ -1,6 +1,6 @@
+import { RiFolderOpenLine, RiGithubLine } from "@remixicon/react";
 import { UPDATE_CHANNEL_LABELS, type UpdateChannel } from "@shared/utils/updater";
 import { createFileRoute } from "@tanstack/react-router";
-import { RiFolderOpenLine } from "@remixicon/react";
 import { SettingsSelect } from "@/components/settings-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,17 +88,43 @@ function AboutSettingsPage() {
 				</CardContent>
 			</Card>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Channels</CardTitle>
-					<CardDescription>Choose which release channel to follow.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FieldGroup>
-						<SettingsSelect configKey="app.channel" defaultValue="stable" label="Update channel" options={CHANNEL_OPTIONS} />
-					</FieldGroup>
-				</CardContent>
-			</Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Channels</CardTitle>
+                    <CardDescription>Choose which release channel to follow.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <FieldGroup>
+                        <SettingsSelect configKey="app.channel" defaultValue="stable" label="Update channel" options={CHANNEL_OPTIONS} />
+                    </FieldGroup>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Enhanced listening</CardTitle>
+                    <CardDescription>Brought to you by ItsTauTvyDas! Listen to music freely without any pressure from the ads!</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <FieldGroup>
+                        <Button
+                            variant="outline"
+                            render={
+                                <a
+                                    href="https://github.com/ItsTauTvyDas/ytmdesktop2-adless"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                />
+                            }
+                        >
+                            <span data-icon="inline-end">
+                                <RiGithubLine/>
+                            </span>
+                            ItsTauTvyDas
+                        </Button>
+                    </FieldGroup>
+                </CardContent>
+            </Card>
 		</>
 	);
 }
