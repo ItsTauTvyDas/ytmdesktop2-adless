@@ -1,6 +1,6 @@
 {
 	"name": "ytmdesktop2",
-	"description": "Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, and local API.",
+	"description": "Unofficial YouTube Music desktop client with Discord RPC, Theming, Last.fm, Streamdeck, local API, non-stop listening and AdBlock.",
 	"version": "1.8.1-adless",
 	"private": false,
 	"author": "Venipa <admin@venipa.net>",
@@ -134,5 +134,5 @@
 		"bufferutil": "^4.0.6",
 		"utf-8-validate": "^5.0.8"
 	},
-	"repository": "https://github.com/Venipa/ytmdesktop2"
+    "repository": "https://github.com/ItsTauTvyDas/ytmdesktop2-adless"
 }
