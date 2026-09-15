@@ -23,7 +23,7 @@ const defaultSettings = {
 	},
 	app: {
 		channel: "stable" as "stable" | "beta" | "alpha",
-		autoupdate: true,
+		autoupdate: false,
 		autostart: true,
 		autostartMinimized: true,
 		getstarted: true,
