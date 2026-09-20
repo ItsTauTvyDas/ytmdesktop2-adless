@@ -316,6 +316,7 @@ function TrayViewPage() {
 	const track = useTrack();
 	const playState = useTrackState();
 	const [trackBusy, setTrackBusy] = useState(false);
+	const trackActionBusyRef = useRef(false);
 	const [trackAccent, setTrackAccent] = useState<string | null>(null);
 	const playStateRef = useRef(playState);
 	playStateRef.current = playState;
@@ -327,6 +328,7 @@ function TrayViewPage() {
 	const [contentHovered, setContentHovered] = useState(false);
 	const [leftThirdHovered, setLeftThirdHovered] = useState(false);
 	const [chromeTooltipOpen, setChromeTooltipOpen] = useState(false);
+	const altOverrideRef = useRef(false);
 	/** Portaled tooltips leave the tray DOM — keep chrome up while a chrome tooltip is open. */
 	const chromeVisible = contentHovered || chromeTooltipOpen || pinned;
 
@@ -340,11 +342,41 @@ function TrayViewPage() {
 	const { mutateAsync: hideTrayView } = trpc.trayView.hide.useMutation();
 	const { mutateAsync: openMain } = trpc.trayView.openMain.useMutation();
 	const { mutateAsync: toggleTrayPin } = trpc.trayView.togglePinned.useMutation();
+	const { mutate: setHovered } = trpc.trayView.setHovered.useMutation();
+	const { mutate: setAltOverride } = trpc.trayView.setAltOverride.useMutation();
 	const { mutateAsync: openSettings } = trpc.app.openSettings.useMutation();
 
 	useEffect(() => {
 		document.title = "YouTube Music - Tray";
 	}, []);
+
+	useEffect(() => {
+		setHovered(contentHovered);
+	}, [contentHovered, setHovered]);
+
+	useEffect(() => {
+		const updateAltOverride = (altOverride: boolean) => {
+			if (altOverrideRef.current === altOverride) return;
+			altOverrideRef.current = altOverride;
+			setAltOverride(altOverride);
+		};
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Alt") updateAltOverride(true);
+		};
+		const onKeyUp = (event: KeyboardEvent) => {
+			if (event.key === "Alt") updateAltOverride(false);
+		};
+		const onBlur = () => updateAltOverride(false);
+		window.addEventListener("keydown", onKeyDown);
+		window.addEventListener("keyup", onKeyUp);
+		window.addEventListener("blur", onBlur);
+		return () => {
+			window.removeEventListener("keydown", onKeyDown);
+			window.removeEventListener("keyup", onKeyUp);
+			window.removeEventListener("blur", onBlur);
+			updateAltOverride(false);
+		};
+	}, [setAltOverride]);
 
 	useEffect(() => {
 		const collapse = (ev: { clientX: number; clientY: number }) => {
@@ -426,6 +458,23 @@ function TrayViewPage() {
 		});
 	}
 
+	function handlePlayPause() {
+		if (trackActionBusyRef.current || trackBusy || !track) return;
+
+		const shouldPlay = !playStateRef.current?.playing;
+		trackActionBusyRef.current = true;
+		setTrackBusy(true);
+
+		return (shouldPlay ? play() : pause())
+			.then(({ isPlaying, time }) => {
+				patchPlayState(utils, { playing: isPlaying, progress: time });
+			})
+			.finally(() => {
+				trackActionBusyRef.current = false;
+				setTrackBusy(false);
+			});
+	}
+
 	function likeToggle() {
 		if (typeof playStateRef.current?.liked !== "boolean") return;
 		const next = !playStateRef.current.liked;
@@ -456,7 +505,7 @@ function TrayViewPage() {
 
 	async function handleSettings() {
 		await hideTrayView();
-		await openSettings();
+		await openSettings("/trayview-settings");
 	}
 
 	async function handlePinToggle() {
@@ -546,6 +595,10 @@ function TrayViewPage() {
 				setLeftThirdHovered((ev.clientX - left) / width < 1 / 3);
 			}}
 			onMouseMove={(ev) => {
+				if (altOverrideRef.current !== ev.altKey) {
+					altOverrideRef.current = ev.altKey;
+					setAltOverride(ev.altKey);
+				}
 				const { left, width } = ev.currentTarget.getBoundingClientRect();
 				if (width <= 0) return;
 				const inLeftThird = (ev.clientX - left) / width < 1 / 3;
@@ -717,7 +770,7 @@ function TrayViewPage() {
 												}
 											: undefined
 									}
-									onClick={() => void (!playing ? play() : pause())}
+									onClick={() => void handlePlayPause()}
 								>
 									{playing ? <PauseIcon /> : <PlayIcon />}
 								</PlayerButton>

@@ -29,10 +29,51 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 	private _restoredBounds: { x: number; y: number } | null = null;
 	private persistMoved = debounce(() => this._saveWindowState?.(), 250);
 	private _settingsWired = false;
+    private _clickThroughEnabled = false;
+    private _altOverride = false;
+    private _opacityHoverEnabled = false;
+    private _hovered = false;
 
 	constructor(_app: App) {
 		super("trayView");
 	}
+
+    private applyClickThrough() {
+        const win = this.getWindow();
+        if (!win || win.isDestroyed()) return;
+        // Ignore mouse events only when the setting is on AND Alt isn't overriding it.
+        const shouldIgnore = this._clickThroughEnabled && !this._altOverride;
+        win.setIgnoreMouseEvents(shouldIgnore, { forward: true });
+    }
+
+    private static isAltKey(input: Electron.Input): boolean {
+        return input.key === "Alt" || input.code === "AltLeft" || input.code === "AltRight";
+    }
+
+    private currentOpacity(): number {
+        const configured = this.clampOpacity(this.settings.get("trayView.opacity", 1));
+        if (!this._opacityHoverEnabled) return configured;
+        // Full opacity at rest unless hovered
+        return this._hovered ? configured : 1;
+    }
+
+    private applyOpacity() {
+        const win = this.getWindow();
+        if (!win || win.isDestroyed()) return;
+        win.setOpacity(this.currentOpacity());
+    }
+
+    setHovered(hovered: boolean) {
+        if (this._hovered === hovered) return;
+        this._hovered = hovered;
+        this.applyOpacity();
+    }
+
+    setAltOverride(altOverride: boolean) {
+        if (this._altOverride === altOverride) return;
+        this._altOverride = altOverride;
+        this.applyClickThrough();
+    }
 
 	private get settings(): SettingsProvider {
 		return this.getProvider("settings");
@@ -42,18 +83,35 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 		return this.getProvider("tray");
 	}
 
-	async AfterInit() {
-		this._pinned = !!this.settings.get("trayView.pinned", false);
-		if (!this._settingsWired) {
-			this._settingsWired = true;
-			this.settings.onSettingChange("trayView.pinned", (value) => {
-				const pinned = !!value;
-				if (pinned === this._pinned) return;
-				this.setPinned(pinned, false);
-			});
-		}
-		void this.tryRestorePinned();
-	}
+    private clampOpacity(value: unknown): number {
+        const n = typeof value === "number" ? value : Number(value);
+        if (!Number.isFinite(n)) return 1;
+        return Math.min(1, Math.max(0.3, n));
+    }
+
+    async AfterInit() {
+        this._pinned = !!this.settings.get("trayView.pinned", false);
+        this._clickThroughEnabled = !!this.settings.get("trayView.clickThrough", false);
+        this._opacityHoverEnabled = !!this.settings.get("trayView.applyOpacityOnHover", false);
+        if (!this._settingsWired) {
+            this._settingsWired = true;
+            this.settings.onSettingChange("trayView.pinned", (value) => {
+                const pinned = !!value;
+                if (pinned === this._pinned) return;
+                this.setPinned(pinned, false);
+            });
+            this.settings.onSettingChange("trayView.opacity", () => this.applyOpacity());
+            this.settings.onSettingChange("trayView.applyOpacityOnHover", (value) => {
+                this._opacityHoverEnabled = !!value;
+                this.applyOpacity();
+            });
+            this.settings.onSettingChange("trayView.clickThrough", (value) => {
+                this._clickThroughEnabled = !!value;
+                this.applyClickThrough();
+            });
+        }
+        void this.tryRestorePinned();
+    }
 
 	private async tryRestorePinned() {
 		this._pinned = !!this.settings.get("trayView.pinned", false);
@@ -125,6 +183,16 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			win.setMinimizable(false);
 			win.setMaximizable(false);
 			win.webContents.setBackgroundThrottling(false);
+			this._hovered = false;
+			this._altOverride = false;
+            this.windowContext.views.trayViewWindow = win;
+            win.webContents.on("before-input-event", (_event, input) => {
+                if (!TrayViewProvider.isAltKey(input)) return;
+                const down = input.type === "keyDown" || input.type === "rawKeyDown";
+                this.setAltOverride(down);
+            });
+            this.applyOpacity();
+            this.applyClickThrough();
 
 			const { state, saveState, restored } = await wrapWindowHandler(win, "trayview", {
 				width: TRAY_VIEW_WIDTH,
@@ -151,18 +219,21 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 				ev.preventDefault();
 				dismiss();
 			});
-			win.on("blur", () => {
-				if (win.isDestroyed() || !win.isVisible()) return;
-				if (this._pinned) return;
-				if (Date.now() < this._suppressBlurUntil) return;
-				this._blurHiddenAt = Date.now();
-				dismiss();
-			});
+            win.on("blur", () => {
+                if (this._altOverride) {
+                    this._altOverride = false;
+                    this.applyClickThrough();
+                }
+                if (win.isDestroyed() || !win.isVisible()) return;
+                if (this._pinned) return;
+                if (Date.now() < this._suppressBlurUntil) return;
+                this._blurHiddenAt = Date.now();
+                dismiss();
+            });
 			win.webContents.on("before-input-event", (_ev, input) => {
 				if (input.type === "keyDown" && input.key === "Escape") dismiss();
 			});
 
-			this.windowContext.views.trayViewWindow = win;
 			return win;
 		})();
 

@@ -59,7 +59,7 @@ export const createTrayMenu = (provider: BaseProvider) => {
 		{
 			label: "Settings",
 			click: () => {
-				void appProvider.openSettingsWindow();
+				void appProvider.openSettingsWindow("/trayview-settings");
 			},
 		},
 		{

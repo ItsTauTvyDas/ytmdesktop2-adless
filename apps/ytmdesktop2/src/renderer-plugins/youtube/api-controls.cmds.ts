@@ -98,11 +98,45 @@ function isPlayingState(playerApi: PlayerApi): boolean {
 	return playerApi.getPlayerState() === 1;
 }
 
+type NonStopVideo = HTMLVideoElement & {
+	ytmdYoutubeNonStopPause?: () => void;
+};
+
+function pausePlayer(playerApi: PlayerApi): void {
+	const video = document.querySelector("video") as NonStopVideo | null;
+	if (video?.ytmdYoutubeNonStopPause) {
+		video.ytmdYoutubeNonStopPause();
+		return;
+	}
+	playerApi.pauseVideo();
+}
+
 function playbackSnapshot(playerApi: PlayerApi, playing?: boolean) {
 	return {
 		isPlaying: playing ?? isPlayingState(playerApi),
 		time: playerApi.getCurrentTime(),
 	};
+}
+
+let playbackCommandQueue = Promise.resolve();
+
+function serializePlaybackCommand<T>(command: () => Promise<T>): Promise<T> {
+	const run = playbackCommandQueue.then(command);
+	playbackCommandQueue = run.then(
+		() => undefined,
+		() => undefined,
+	);
+	return run;
+}
+
+async function waitForPlaybackState(playerApi: PlayerApi, playing: boolean): Promise<void> {
+	const startedAt = Date.now();
+	while (Date.now() - startedAt < 4_000) {
+		const state = playerApi.getPlayerState();
+		if (playing ? state === 1 : state === 2 || state === 0) return;
+		await new Promise((resolve) => setTimeout(resolve, 50));
+	}
+	throw new Error(`Playback did not settle to ${playing ? "playing" : "paused"}`);
 }
 
 async function waitLike(videoId: string | null, pred: (s: YtmLikeStatus) => boolean, fallback: boolean): Promise<boolean> {
@@ -115,19 +149,25 @@ async function waitLike(videoId: string | null, pred: (s: YtmLikeStatus) => bool
 }
 
 export const trackControls = {
-	toggle: (player: PlayerApi) => {
-		const playing = isPlayingState(player);
-		playing ? player.pauseVideo() : player.playVideo();
-		return playbackSnapshot(player, !playing);
-	},
-	play: (playerApi: PlayerApi) => {
-		playerApi.playVideo();
-		return playbackSnapshot(playerApi, true);
-	},
-	pause: (playerApi: PlayerApi) => {
-		playerApi.pauseVideo();
-		return playbackSnapshot(playerApi, false);
-	},
+	toggle: (player: PlayerApi) =>
+		serializePlaybackCommand(async () => {
+			const playing = isPlayingState(player);
+			playing ? pausePlayer(player) : player.playVideo();
+			await waitForPlaybackState(player, !playing);
+			return playbackSnapshot(player);
+		}),
+	play: (playerApi: PlayerApi) =>
+		serializePlaybackCommand(async () => {
+			playerApi.playVideo();
+			await waitForPlaybackState(playerApi, true);
+			return playbackSnapshot(playerApi);
+		}),
+	pause: (playerApi: PlayerApi) =>
+		serializePlaybackCommand(async () => {
+			pausePlayer(playerApi);
+			await waitForPlaybackState(playerApi, false);
+			return playbackSnapshot(playerApi);
+		}),
 	next: (playerApi: PlayerApi) => {
 		playerApi.nextVideo();
 		return playbackSnapshot(playerApi);

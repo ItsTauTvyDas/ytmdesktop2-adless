@@ -13,6 +13,7 @@ import {
 	RiLiveLine,
 	RiMusic2Line,
 	RiPaletteLine,
+    RiPictureInPictureLine,
 	RiPuzzleLine,
 	RiQrCodeLine,
 	RiServerLine,
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/_settings")({
 
 const tabs = {
 	generic: { to: "/", label: "Generic", icon: RiSettings3Line },
+    trayview: { to: "/trayview-settings", label: "Tray View", icon: RiPictureInPictureLine },
 	discord: { to: "/discord", label: "Discord", icon: RiDiscordLine },
 	lastfm: { to: "/lastfm", label: "Last.fm", icon: RiAlbumLine },
 	about: { to: "/about", label: "About", icon: RiInformationLine },
@@ -278,6 +280,7 @@ function SettingsLayout() {
 							<SidebarGroupContent>
 								<SidebarMenu className="flex flex-col gap-1">
 									<SettingsNavItem {...tabs.generic} />
+                                    <SettingsNavItem {...tabs.trayview} />
 									<PlayerNav />
 									<AppearanceNav />
 									<SettingsNavItem {...tabs.discord} />

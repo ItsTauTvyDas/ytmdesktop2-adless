@@ -1,3 +1,4 @@
+import { version as releaseVersion } from "node:os";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { applyYoutubeZoom, applyZoomToWebContents, clampZoomFactor } from "@main/domain/uiZoom";
 import { requestAppRelaunch } from "@main/handlers/quitHandler";
@@ -7,11 +8,11 @@ import { setSentryEnabled } from "@main/infra/sentry";
 import { serverMain } from "@main/ipc/serverEvents";
 import { getYoutubeView, onMusicReload } from "@main/lifecycle";
 import { trackService } from "@main/trpc/routers/track";
+import { loadUrlOfWindow } from "@main/windows/webContentUtils";
 import { centerWindowOnParent, createAppDialogWindow, createAppWindow, shortcutOnWindow, WindowOptions } from "@main/windows/windowUtils";
 import { stripUndefined } from "@shared/utils/object";
 import { App, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
 import { debounce } from "lodash-es";
-import { version as releaseVersion } from "node:os";
 
 const STATE_PAUSE_TIME = 30e4;
 const TEST_RESTART_NEEDED_DIALOG = isDevelopment && process.env.TEST_RESTART_NEEDED_DIALOG === "1";
@@ -182,47 +183,48 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
   }
 
   /** Open / focus settings BrowserWindow. */
-  async openSettingsWindow() {
-    let settingsWindow = this.views.settingsWindow as any as BrowserWindow;
-    const parent = this.windowContext.main;
-    try {
-      if (settingsWindow && !settingsWindow.isDestroyed()) {
-        centerWindowOnParent(settingsWindow, parent);
-        settingsWindow.show();
-        settingsWindow.moveTop();
-        settingsWindow.focus();
-        return settingsWindow;
-      }
-      if (this.settingsWindowOpenPromise) {
-        return await this.settingsWindowOpenPromise;
-      }
-      this.settingsWindowOpenPromise = createAppWindow({
-        parent,
-        height: 640,
-        minHeight: 540,
-        minimizeable: false,
-      }).then((win) => {
-        win.on("close", () => {
-          const isTrayEnabled = this.getProvider("settings").get("app.minimizeTrayOverride", false) ?? false;
-          if (!this.windowContext.main.isVisible() && !isTrayEnabled) {
-            this.windowContext.main.show();
-            this.windowContext.main.focus();
+  async openSettingsWindow(path = "/") {
+      let settingsWindow = this.views.settingsWindow as any as BrowserWindow;
+      const parent = this.windowContext.main;
+      try {
+          if (settingsWindow && !settingsWindow.isDestroyed()) {
+              await loadUrlOfWindow(settingsWindow, path); // navigate existing window to the requested route
+              centerWindowOnParent(settingsWindow, parent);
+              settingsWindow.show();
+              settingsWindow.moveTop();
+              settingsWindow.focus();
+              return settingsWindow;
           }
-     
-        });
-        shortcutOnWindow(win, "Escape", () => {
-          win.close();
-        });
-        this.windowContext.views.settingsWindow = win as any;
-        return win;
-      });
-      return await this.settingsWindowOpenPromise;
-    } catch (err) {
-      this.logger.error(err);
-      return null;
-    } finally {
-      this.settingsWindowOpenPromise = null;
-    }
+          if (this.settingsWindowOpenPromise) {
+              return await this.settingsWindowOpenPromise;
+          }
+          this.settingsWindowOpenPromise = createAppWindow({
+              parent,
+              height: 640,
+              minHeight: 540,
+              minimizeable: false,
+              path, // <- opens directly on this route
+          }).then((win) => {
+              win.on("close", () => {
+                  const isTrayEnabled = this.getProvider("settings").get("app.minimizeTrayOverride", false) ?? false;
+                  if (!this.windowContext.main.isVisible() && !isTrayEnabled) {
+                      this.windowContext.main.show();
+                      this.windowContext.main.focus();
+                  }
+              });
+              shortcutOnWindow(win, "Escape", () => {
+                  win.close();
+              });
+              this.windowContext.views.settingsWindow = win as any;
+              return win;
+          });
+          return await this.settingsWindowOpenPromise;
+      } catch (err) {
+          this.logger.error(err);
+          return null;
+      } finally {
+          this.settingsWindowOpenPromise = null;
+      }
   }
 
   /** Open named subwindow (`settingsWindow` or hash route name). */

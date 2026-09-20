@@ -1,8 +1,8 @@
-import { fromIpcEvent } from "@main/trpc/fromIpcEvent";
 import { serverMain } from "@main/ipc/serverEvents";
+import { fromIpcEvent } from "@main/trpc/fromIpcEvent";
 import { provider } from "@main/trpc/provider";
-import { publicProcedure, router } from "@shared/trpc/trpc";
 import IPC_EVENT_NAMES from "@shared/constants/eventNames";
+import { publicProcedure, router } from "@shared/trpc/trpc";
 import { BrowserWindow } from "electron";
 import { z } from "zod";
 
@@ -30,8 +30,8 @@ export const appServiceRouter = router({
 		serverMain.emit("app.quit", null, input ?? false);
 	}),
 	openWindow: publicProcedure.input(z.string()).mutation(({ ctx, input }): Promise<void> => provider(ctx, "app").openSubWindow(input)),
-	openSettings: publicProcedure.mutation(async ({ ctx }): Promise<boolean> => {
-		await provider(ctx, "app").openSettingsWindow();
+	openSettings: publicProcedure.input(z.string().optional()).mutation(async ({ ctx, input }): Promise<boolean> => {
+		await provider(ctx, "app").openSettingsWindow(input);
 		return true;
 	}),
 	closeWindow: publicProcedure.input(z.string().optional()).mutation(({ ctx, input }): void => {

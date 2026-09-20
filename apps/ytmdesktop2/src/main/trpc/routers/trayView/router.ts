@@ -1,6 +1,7 @@
 import { fromIpcEvent } from "@main/trpc/fromIpcEvent";
 import { provider } from "@main/trpc/provider";
 import { publicProcedure, router } from "@shared/trpc/trpc";
+import { z } from "zod";
 
 export type TrayViewState = { active?: boolean; pinned?: boolean };
 
@@ -12,4 +13,10 @@ export const trayViewRouter = router({
 	togglePinned: publicProcedure.mutation(({ ctx }) => provider(ctx, "trayView").togglePinned()),
 	pinned: publicProcedure.query(({ ctx }) => provider(ctx, "trayView").isPinned()),
 	onState: publicProcedure.subscription(() => fromIpcEvent<TrayViewState | null>("trayview.state")),
+    setHovered: publicProcedure.input(z.boolean()).mutation(({ ctx, input }) => {
+        provider(ctx, "trayView").setHovered(input);
+    }),
+    setAltOverride: publicProcedure.input(z.boolean()).mutation(({ ctx, input }) => {
+        provider(ctx, "trayView").setAltOverride(input);
+    }),
 });

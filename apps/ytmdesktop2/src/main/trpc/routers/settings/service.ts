@@ -36,6 +36,9 @@ const defaultSettings = {
 	},
 	trayView: {
 		pinned: false,
+		opacity: 1,
+		clickThrough: false,
+		applyOpacityOnHover: false,
 	},
 	volumeRatio: {
 		enabled: true,
