@@ -1,4 +1,5 @@
 import { version as releaseVersion } from "node:os";
+import { pathToFileURL } from "node:url";
 import { AfterInit, BaseProvider, BeforeStart } from "@main/core/baseProvider";
 import { applyYoutubeZoom, applyZoomToWebContents, clampZoomFactor } from "@main/domain/uiZoom";
 import { requestAppRelaunch } from "@main/handlers/quitHandler";
@@ -11,7 +12,7 @@ import { trackService } from "@main/trpc/routers/track";
 import { loadUrlOfWindow } from "@main/windows/webContentUtils";
 import { centerWindowOnParent, createAppDialogWindow, createAppWindow, shortcutOnWindow, WindowOptions } from "@main/windows/windowUtils";
 import { stripUndefined } from "@shared/utils/object";
-import { App, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
+import { App, BrowserWindow, dialog, IpcMainEvent, IpcMainInvokeEvent, shell } from "electron";
 import { debounce } from "lodash-es";
 
 const STATE_PAUSE_TIME = 30e4;
@@ -330,6 +331,22 @@ export default class AppProvider extends BaseProvider implements AfterInit, Befo
 
   async openLogsFolder() {
     return this.handleOpenFile(null, ensureLogsDir());
+  }
+
+  /**
+   * Native image picker. Returns a file:// URL rather than a path so callers can
+   * store it in the same field as a remote URL and treat both the same way.
+   */
+  async pickImageFile(): Promise<string | null> {
+    const parent = BrowserWindow.getFocusedWindow() ?? this.windowContext?.main ?? undefined;
+    const result = await dialog.showOpenDialog(parent!, {
+      title: "Choose an image",
+      properties: ["openFile"],
+      filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp", "bmp", "avif", "svg"] }],
+    });
+    const filePath = result.filePaths?.[0];
+    if (result.canceled || !filePath) return null;
+    return pathToFileURL(filePath).toString();
   }
 
   async handleOpenFile(_ev: IpcMainInvokeEvent | null, filePath: string) {

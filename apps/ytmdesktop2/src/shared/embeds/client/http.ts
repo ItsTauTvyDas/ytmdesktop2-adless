@@ -1,11 +1,13 @@
 import { mapTrackToViewModel, withApiThumbnail } from "../map";
 import type { EmbedStateLike, EmbedTrackLike, NowPlayingViewModel } from "../types";
 
+export type EmbedStatusSignal = "connecting" | "reconnecting" | "disconnected" | "unauthorized" | { error: string };
+
 export interface EmbedHttpClientOptions {
 	readonly baseUrl: string;
 	readonly token?: string | null;
 	readonly onTrack: (track: NowPlayingViewModel | null) => void;
-	readonly onStatus?: (status: string | null) => void;
+	readonly onStatus?: (status: EmbedStatusSignal | null) => void;
 }
 
 function joinUrl(base: string, path: string, token?: string | null): string {
@@ -40,16 +42,16 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 		onTrack(withApiThumbnail(mapTrackToViewModel(trackRaw, stateRaw), baseUrl, token));
 	};
 
-	const setStatus = (msg: string | null) => {
-		onStatus?.(msg);
+	const setStatus = (signal: EmbedStatusSignal | null) => {
+		onStatus?.(signal);
 	};
 
 	const loadTrack = async () => {
 		const result = await fetchJson<EmbedTrackLike | null>(joinUrl(baseUrl, "/track", token));
 		if (stopped) return;
 		if (!result.ok) {
-			if (result.status === 401) setStatus("Unauthorized — check token");
-			else setStatus(`API error ${result.status}`);
+			if (result.status === 401) setStatus("unauthorized");
+			else setStatus({ error: `API error ${result.status}` });
 			trackRaw = null;
 			emit();
 			return;
@@ -63,7 +65,7 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 		const result = await fetchJson<EmbedStateLike | null>(joinUrl(baseUrl, "/track/state", token));
 		if (stopped) return;
 		if (!result.ok) {
-			if (result.status === 401) setStatus("Unauthorized — check token");
+			if (result.status === 401) setStatus("unauthorized");
 			return;
 		}
 		applyState(result.data);
@@ -97,7 +99,7 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 	};
 
 	/** Drop live payload so layouts show empty state until reconnect. */
-	const clearLive = (status: string | null) => {
+	const clearLive = (status: EmbedStatusSignal | null) => {
 		trackRaw = null;
 		stateRaw = null;
 		lastStateAt = 0;
@@ -115,7 +117,7 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 		try {
 			ws = new WebSocket(wsUrl.toString());
 		} catch {
-			clearLive("Disconnected");
+			clearLive("disconnected");
 			scheduleReconnect();
 			return;
 		}
@@ -158,7 +160,7 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 		ws.onclose = () => {
 			ws = null;
 			if (stopped) return;
-			clearLive("Reconnecting…");
+			clearLive("reconnecting");
 			scheduleReconnect();
 		};
 
@@ -180,7 +182,7 @@ export function createEmbedHttpClient(options: EmbedHttpClientOptions): { stop: 
 	};
 
 	void (async () => {
-		setStatus("Connecting…");
+		setStatus("connecting");
 		await loadTrack();
 		await loadState();
 		if (stopped) return;

@@ -10,6 +10,13 @@ import { toAppThumbUrl } from "@shared/media/appThumbUrl";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+	ObsColorsCard,
+	ObsIdleArtCard,
+	ObsLanguageCard,
+	ObsShapeCard,
+	useExtendedEmbedConfig,
+} from "@/components/obs-extended-settings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +51,7 @@ const FLAG_ROWS: { key: BoolFlagKey; label: string; description: string }[] = [
 ];
 
 function ObsSettingsPage() {
+	const extended = useExtendedEmbedConfig();
 	const track = useTrack();
 	const trackState = useTrackState();
 	const statusQuery = trpc.api.status.useQuery(undefined, { refetchInterval: 5_000 });
@@ -161,10 +169,10 @@ function ObsSettingsPage() {
 					>
 						{flags.layout === "fullscreen" ? (
 							<div className="h-[220px] w-full overflow-hidden">
-								<NowPlayingWidget track={viewModel} flags={flags} />
+								<NowPlayingWidget track={viewModel} flags={flags} extended={extended} />
 							</div>
 						) : (
-							<NowPlayingWidget track={viewModel} flags={flags} />
+							<NowPlayingWidget track={viewModel} flags={flags} extended={extended} />
 						)}
 					</div>
 
@@ -291,6 +299,11 @@ function ObsSettingsPage() {
 					) : null}
 				</CardFooter>
 			</Card>
+
+			<ObsLanguageCard />
+			<ObsColorsCard />
+			<ObsShapeCard />
+			<ObsIdleArtCard />
 		</>
 	);
 }

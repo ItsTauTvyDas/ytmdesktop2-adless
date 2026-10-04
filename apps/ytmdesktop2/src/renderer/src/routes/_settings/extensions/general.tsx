@@ -3,7 +3,7 @@ import { SettingsCheckbox } from "@/components/settings-checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
 
-export const Route = createFileRoute("/_settings/extensions")({
+export const Route = createFileRoute("/_settings/extensions/general")({
 	component: ExtensionsSettingsPage,
 });
 
@@ -11,7 +11,7 @@ function ExtensionsSettingsPage() {
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Extensions</CardTitle>
+				<CardTitle>General</CardTitle>
 				<CardDescription>Enable or disable optional services that run in the background. After changing settings, restart the app to take full effect.</CardDescription>
 			</CardHeader>
 			<CardContent>

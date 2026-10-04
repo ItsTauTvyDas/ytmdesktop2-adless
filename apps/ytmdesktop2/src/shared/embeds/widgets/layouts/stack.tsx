@@ -2,17 +2,19 @@ import {
 	C,
 	CardFrame,
 	CoverArt,
+	type LayoutProps,
 	ProgressRow,
 	Shell,
-	emptyLabel,
 	showArt,
 	showProgress,
-	type LayoutProps,
+	useEmbedTheme,
+	useIdleLabel,
 } from "../chrome";
 
 export function StackLayout({ track, flags, accent, src, className, status }: LayoutProps) {
 	const idle = !track;
-	const label = emptyLabel(status);
+	const theme = useEmbedTheme();
+	const label = useIdleLabel(status);
 
 	return (
 		<Shell flags={flags} layout="stack" className={className} playing={track?.playing} idle={idle}>
@@ -24,20 +26,20 @@ export function StackLayout({ track, flags, accent, src, className, status }: La
 						</div>
 					) : null}
 					<div style={{ minWidth: 0, textAlign: "center" }}>
-						{flags.title || idle ? (
+						{(idle ? label !== null : flags.title) ? (
 							<div
 								style={{
 									fontSize: 16,
 									fontWeight: 650,
 									lineHeight: 1.25,
-									color: idle ? C.muted : undefined,
+									color: idle ? theme.color.artist : theme.color.title,
 								}}
 							>
 								{idle ? label : track.title}
 							</div>
 						) : null}
 						{!idle && flags.artist ? (
-							<div style={{ marginTop: 4, fontSize: 13, color: C.muted }}>{track.artist}</div>
+							<div style={{ marginTop: 4, fontSize: 13, color: theme.color.artist }}>{track.artist}</div>
 						) : null}
 					</div>
 					{!idle && showProgress(flags) ? <ProgressRow track={track} accent={accent} /> : null}

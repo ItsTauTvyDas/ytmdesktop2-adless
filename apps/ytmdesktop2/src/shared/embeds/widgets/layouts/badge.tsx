@@ -3,14 +3,15 @@ import { useLayoutEffect, useRef, useState } from "react";
 import {
 	ART_DURATION,
 	ART_EASE,
-	CARD_RADIUS,
 	C,
+	CARD_RADIUS,
 	CardFrame,
 	CoverArt,
-	Shell,
-	emptyLabel,
-	showArt,
 	type LayoutProps,
+	Shell,
+	showArt,
+	useEmbedTheme,
+	useIdleLabel,
 } from "../chrome";
 
 const BADGE_MAX_WIDTH = 360;
@@ -20,7 +21,8 @@ export function BadgeLayout({ track, flags, accent, src, className, status }: La
 	const contentRef = useRef<HTMLDivElement>(null);
 	const [width, setWidth] = useState<number | undefined>(undefined);
 	const idle = !track;
-	const label = emptyLabel(status);
+	const theme = useEmbedTheme();
+	const label = useIdleLabel(status);
 
 	useLayoutEffect(() => {
 		const el = contentRef.current;
@@ -64,7 +66,7 @@ export function BadgeLayout({ track, flags, accent, src, className, status }: La
 					>
 						{showArt(flags) ? <CoverArt src={idle ? null : src} accent={accent} size={36} /> : null}
 						<div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-							{flags.title || idle ? (
+							{(idle ? label !== null : flags.title) ? (
 								<div
 									style={{
 										fontSize: 13,
@@ -73,7 +75,7 @@ export function BadgeLayout({ track, flags, accent, src, className, status }: La
 										overflow: "hidden",
 										textOverflow: "ellipsis",
 										maxWidth: 220,
-										color: idle ? C.muted : undefined,
+										color: idle ? theme.color.artist : theme.color.title,
 									}}
 								>
 									{idle ? label : track.title}
@@ -83,7 +85,7 @@ export function BadgeLayout({ track, flags, accent, src, className, status }: La
 								<div
 									style={{
 										fontSize: 11,
-										color: C.muted,
+										color: theme.color.artist,
 										whiteSpace: "nowrap",
 										overflow: "hidden",
 										textOverflow: "ellipsis",

@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
-import { type CSSProperties, type ReactNode, useEffect, useLayoutEffect, useState } from "react";
+import { type CSSProperties, createContext, type ReactNode, useContext, useEffect, useLayoutEffect, useState } from "react";
 import type { EmbedFlags, EmbedLayout } from "../flags";
+import { defaultEmbedTheme, type EmbedTheme, progressColor } from "../theme";
 import type { NowPlayingViewModel } from "../types";
 
 /** Tray-inspired tokens (standalone SPA — no app Tailwind theme). */
@@ -20,8 +21,17 @@ export const C = {
 export const FONT = '"Segoe UI", system-ui, -apple-system, sans-serif';
 export const ART_EASE = [0.16, 1, 0.3, 1] as const;
 export const ART_DURATION = 0.28;
-/** Shared card corner radius (default / ticker / badge). */
 export const CARD_RADIUS = 12;
+
+const ThemeContext = createContext<EmbedTheme>(defaultEmbedTheme());
+
+export function EmbedThemeProvider({ theme, children }: { theme: EmbedTheme; children: ReactNode }) {
+	return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
+}
+
+export function useEmbedTheme(): EmbedTheme {
+	return useContext(ThemeContext);
+}
 
 export interface LayoutProps {
 	readonly track: NowPlayingViewModel | null;
@@ -32,10 +42,11 @@ export interface LayoutProps {
 	readonly status?: string | null;
 }
 
-/** Status wins; else idle copy for empty layouts. */
-export function emptyLabel(status?: string | null): string {
+export function useIdleLabel(status?: string | null): string | null {
+	const theme = useEmbedTheme();
 	const trimmed = status?.trim();
-	return trimmed || "Nothing playing";
+	if (trimmed) return status ?? null;
+	return theme.text.idle;
 }
 
 export function formatTime(seconds: number): string {
@@ -73,7 +84,6 @@ function useReadyImage(src: string | null | undefined): string | null {
 	return ready;
 }
 
-/** Commit art + accent together when image is ready (trayview pattern). */
 export function useAlignedArtDisplay(
 	thumbnail: string | null | undefined,
 	liveAccent: string | null,
@@ -174,6 +184,9 @@ export function CoverArt({
 	accent: string;
 	size?: number;
 }) {
+	const theme = useEmbedTheme();
+	const placeholder = theme.text.artPlaceholder;
+	const idleImage = theme.idleImage;
 	return (
 		<div
 			style={{
@@ -182,7 +195,7 @@ export function CoverArt({
 				height: size,
 				flexShrink: 0,
 				overflow: "hidden",
-				borderRadius: 8,
+				borderRadius: theme.radius.art,
 				background: C.placeholder,
 				boxShadow: `0 0 0 1px ${C.borderSoft}, 0 1px 2px rgba(0,0,0,0.25)`,
 			}}
@@ -222,14 +235,17 @@ export function CoverArt({
 							fontWeight: 600,
 							letterSpacing: "0.06em",
 							color: C.muted,
-							background: `linear-gradient(135deg, ${accent}55, ${C.placeholder})`,
+							background: idleImage ? undefined : `linear-gradient(135deg, ${accent}55, ${C.placeholder})`,
+							backgroundImage: idleImage ? `url(${idleImage})` : undefined,
+							backgroundSize: "cover",
+							backgroundPosition: "center",
 						}}
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						transition={{ duration: ART_DURATION, ease: ART_EASE }}
 					>
-						YTM
+						{idleImage ? null : placeholder}
 					</motion.div>
 				)}
 			</AnimatePresence>
@@ -246,6 +262,7 @@ export function ProgressRow({
 	accent: string;
 	compact?: boolean;
 }) {
+	const theme = useEmbedTheme();
 	const pct = track.duration > 0 ? Math.min(100, Math.max(0, (track.progress / track.duration) * 100)) : 0;
 	const timeStyle: CSSProperties = {
 		width: compact ? 32 : 36,
@@ -253,18 +270,18 @@ export function ProgressRow({
 		fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
 		fontSize: 10,
 		fontVariantNumeric: "tabular-nums",
-		color: C.muted,
 	};
+	const radius = theme.radius.progress;
 	return (
 		<div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: compact ? 8 : 12, width: "100%" }}>
-			<span style={{ ...timeStyle, textAlign: "right", color: C.mutedDim }}>{formatTime(track.progress)}</span>
+			<span style={{ ...timeStyle, textAlign: "right", color: theme.color.startTime }}>{formatTime(track.progress)}</span>
 			<div
 				style={{
 					position: "relative",
 					height: compact ? 4 : 6,
 					minWidth: 0,
 					flex: 1,
-					borderRadius: 999,
+					borderRadius: radius,
 					background: C.track,
 					overflow: "hidden",
 				}}
@@ -274,13 +291,13 @@ export function ProgressRow({
 						position: "absolute",
 						inset: "0 auto 0 0",
 						width: `${pct}%`,
-						borderRadius: 999,
-						backgroundColor: accent,
+						borderRadius: radius,
+						backgroundColor: progressColor(theme, accent),
 						transition: "width 100ms ease-out",
 					}}
 				/>
 			</div>
-			<span style={timeStyle}>{formatTime(track.duration)}</span>
+			<span style={{ ...timeStyle, color: theme.color.endTime }}>{formatTime(track.duration)}</span>
 		</div>
 	);
 }

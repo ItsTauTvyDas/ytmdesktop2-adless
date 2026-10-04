@@ -1,8 +1,10 @@
-import { C, Shell, emptyLabel, type LayoutProps } from "../chrome";
+import { C, type LayoutProps, Shell, useEmbedTheme,
+	useIdleLabel } from "../chrome";
 
 export function TextLayout({ track, flags, className, status }: LayoutProps) {
 	const idle = !track;
-	const label = emptyLabel(status);
+	const theme = useEmbedTheme();
+	const label = useIdleLabel(status);
 
 	return (
 		<Shell flags={flags} layout="text" className={className} playing={track?.playing} idle={idle}>
@@ -16,7 +18,7 @@ export function TextLayout({ track, flags, className, status }: LayoutProps) {
 					textShadow: "0 1px 10px rgba(0,0,0,0.85)",
 				}}
 			>
-				{flags.title || idle ? (
+				{(idle ? label !== null : flags.title) ? (
 					<div
 						style={{
 							fontSize: 20,
@@ -25,7 +27,7 @@ export function TextLayout({ track, flags, className, status }: LayoutProps) {
 							whiteSpace: "nowrap",
 							overflow: "hidden",
 							textOverflow: "ellipsis",
-							color: idle ? C.muted : undefined,
+							color: idle ? theme.color.artist : theme.color.title,
 						}}
 					>
 						{idle ? label : track.title}
@@ -35,7 +37,7 @@ export function TextLayout({ track, flags, className, status }: LayoutProps) {
 					<div
 						style={{
 							fontSize: 14,
-							color: C.muted,
+							color: theme.color.artist,
 							whiteSpace: "nowrap",
 							overflow: "hidden",
 							textOverflow: "ellipsis",

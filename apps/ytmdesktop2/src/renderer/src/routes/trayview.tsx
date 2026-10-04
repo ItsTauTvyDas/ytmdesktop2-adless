@@ -552,7 +552,7 @@ function TrayViewPage() {
 
 	async function handleSettings() {
 		await hideTrayView();
-		await openSettings("/trayview-settings");
+		await openSettings("/extensions/trayview");
 	}
 
 	async function handlePinToggle() {

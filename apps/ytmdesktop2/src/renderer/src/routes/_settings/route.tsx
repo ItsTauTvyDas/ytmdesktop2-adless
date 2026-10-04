@@ -19,6 +19,7 @@ import {
 	RiServerLine,
 	RiSettings3Line,
 	RiShieldKeyholeLine,
+	RiToggleLine,
 } from "@remixicon/react";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ComponentType, type CSSProperties, memo, Suspense, useEffect, useState } from "react";
@@ -53,11 +54,9 @@ export const Route = createFileRoute("/_settings")({
 
 const tabs = {
 	generic: { to: "/", label: "Generic", icon: RiSettings3Line },
-    trayview: { to: "/trayview-settings", label: "Tray View", icon: RiPictureInPictureLine },
 	discord: { to: "/discord", label: "Discord", icon: RiDiscordLine },
 	lastfm: { to: "/lastfm", label: "Last.fm", icon: RiAlbumLine },
 	about: { to: "/about", label: "About", icon: RiInformationLine },
-	extensions: { to: "/extensions", label: "Extensions", icon: RiPuzzleLine },
 } as const;
 
 const playerSubs = [
@@ -76,6 +75,11 @@ const apiIntegrationSubs = [
 	{ to: "/api-integrations/obs", label: "OBS", icon: RiLiveLine },
 ] as const;
 
+const extensionsSubs = [
+	{ to: "/extensions/general", label: "General", icon: RiToggleLine },
+	{ to: "/extensions/trayview", label: "Tray View", icon: RiPictureInPictureLine },
+] as const;
+
 const appearanceSubs = [
 	{ to: "/appearance/themes", label: "Themes", icon: RiCodeSSlashLine },
 	{ to: "/appearance/display", label: "Display", icon: RiComputerLine },
@@ -91,6 +95,7 @@ type SettingsTabTo =
 	| (typeof playerSubs)[number]["to"]
 	| (typeof apiCoreSubs)[number]["to"]
 	| (typeof apiIntegrationSubs)[number]["to"]
+	| (typeof extensionsSubs)[number]["to"]
 	| (typeof appearanceSubs)[number]["to"];
 
 /** Avoid Link+useRender compose — breaks first click with hash history. */
@@ -222,6 +227,35 @@ const ApiIntegrationsNav = memo(function ApiIntegrationsNav() {
 	);
 });
 
+const ExtensionsNav = memo(function ExtensionsNav() {
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const isSectionActive = pathname.startsWith("/extensions");
+	const [open, setOpen] = useState(isSectionActive);
+
+	useEffect(() => {
+		if (isSectionActive) setOpen(true);
+	}, [isSectionActive]);
+
+	return (
+		<SidebarMenuItem>
+			<Collapsible open={open} onOpenChange={setOpen} className="group/collapsible w-full">
+				<CollapsibleTrigger render={<SidebarMenuButton isActive={isSectionActive} />}>
+					<RiPuzzleLine />
+					<span>Extensions</span>
+					<RiArrowRightSLine className={cn("ml-auto transition-transform duration-150 ease-out", open && "rotate-90")} />
+				</CollapsibleTrigger>
+				<CollapsibleContent>
+					<SidebarMenuSub>
+						{extensionsSubs.map((item) => (
+							<SettingsNavSubItem key={item.to} {...item} />
+						))}
+					</SidebarMenuSub>
+				</CollapsibleContent>
+			</Collapsible>
+		</SidebarMenuItem>
+	);
+});
+
 const AppearanceNav = memo(function AppearanceNav() {
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const isSectionActive = pathname.startsWith("/appearance");
@@ -280,13 +314,12 @@ function SettingsLayout() {
 							<SidebarGroupContent>
 								<SidebarMenu className="flex flex-col gap-1">
 									<SettingsNavItem {...tabs.generic} />
-                                    <SettingsNavItem {...tabs.trayview} />
 									<PlayerNav />
 									<AppearanceNav />
 									<SettingsNavItem {...tabs.discord} />
 									<SettingsNavItem {...tabs.lastfm} />
 									<ApiIntegrationsNav />
-									<SettingsNavItem {...tabs.extensions} />
+									<ExtensionsNav />
 									<SettingsNavItem {...tabs.about} />
 								</SidebarMenu>
 							</SidebarGroupContent>

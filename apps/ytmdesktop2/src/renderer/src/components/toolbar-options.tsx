@@ -1,4 +1,4 @@
-import { AlertCircleIcon, CheckIcon, DownloadIcon } from "lucide-react";
+import { AlertCircleIcon, CheckIcon, DownloadIcon, PictureInPicture2Icon } from "lucide-react";
 import DevIcon from "@/assets/icons/chip.svg?react";
 import RPCIcon from "@/assets/icons/discord-rpc.svg?react";
 import HomeIcon from "@/assets/icons/home.svg?react";
@@ -20,8 +20,40 @@ export function ToolbarOptions() {
 	const [isDev] = useSettingsState<boolean>("app.enableDev", false);
 	const { mutateAsync: openWindow } = trpc.app.openWindow.useMutation();
 
+	const utils = trpc.useUtils();
+	const { data: trayActive = false } = trpc.trayView.active.useQuery();
+	const { mutateAsync: toggleTrayActive, isLoading: trayPending } = trpc.trayView.toggleActive.useMutation();
+
+	trpc.trayView.onState.useSubscription(undefined, {
+		onData: (state) => {
+			if (typeof state?.active === "boolean") utils.trayView.active.setData(undefined, state.active);
+		},
+	});
+
+	async function toggleTrayView() {
+		const next = await toggleTrayActive();
+		utils.trayView.active.setData(undefined, next);
+	}
+
 	return (
 		<div className="flex flex-row items-center gap-2">
+			<button
+				type="button"
+				className="control-button relative"
+				disabled={trayPending}
+				aria-pressed={trayActive}
+				title={trayActive ? "Tray popup is open, click to close" : "Tray popup is closed, click to open"}
+				onClick={() => void toggleTrayView()}
+			>
+				<PictureInPicture2Icon className={`size-4 ${trayActive ? "opacity-100" : "opacity-40"}`} />
+				{trayPending ? (
+					<div className="absolute top-0 right-0 flex size-3 items-center justify-center rounded-full bg-gray-600 p-0.5">
+						<Spinner className="size-2" />
+					</div>
+				) : (
+					<div className={`absolute top-0 right-0 size-2 rounded-full ${trayActive ? "bg-green-500" : "bg-gray-500"}`} />
+				)}
+			</button>
 			<button
 				type="button"
 				className={`control-button relative h-4 ${lastFMLoading ? "opacity-70" : ""} ${lastFM?.name ? "!w-auto flex gap-2.5 items-center px-1.5" : "w-4"}`}

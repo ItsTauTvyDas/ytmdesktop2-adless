@@ -40,6 +40,16 @@ const defaultSettings = {
 		clickThrough: false,
 		applyOpacityOnHover: false,
 	},
+	embeds: {
+		nowPlaying: {
+			extended: {
+				text: { idle: "", artPlaceholder: "", connecting: "", reconnecting: "", disconnected: "", unauthorized: "" },
+				color: { title: "", artist: "", startTime: "", endTime: "", progress: "accent" },
+				radius: { art: 8, progress: 12 },
+				idleImage: "",
+			},
+		},
+	},
 	volumeRatio: {
 		enabled: true,
 		volume: 0.05,

@@ -46,6 +46,7 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 	private _inputPollMs = 0;
 	private _inputProbe: GlobalInputProbe | null | undefined;
 	private _altFromRenderer = false;
+	private _shown = false;
 	private _altGesture: AltGestureState = initialAltGestureState;
 
 	constructor(_app: App) {
@@ -299,6 +300,7 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			this._hovered = false;
 			this._altOverride = false;
 			this._opacityCurrent = 1;
+			this._shown = false;
 			this.windowContext.views.trayViewWindow = win;
 			win.webContents.on("before-input-event", (_event, input) => {
 				if (!TrayViewProvider.isAltKey(input)) return;
@@ -307,10 +309,16 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			});
 			this.applyOpacity();
 			this.applyClickThrough();
-			win.on("show", () => this.updateInputTracking());
+			win.on("show", () => {
+				this._shown = true;
+				this.updateInputTracking();
+				this.emitState(true);
+			});
 			win.on("hide", () => {
+				this._shown = false;
 				this.stopInputTracking();
 				this.applyOpacity();
+				this.emitState(false);
 			});
 
 			const { state, saveState, restored } = await wrapWindowHandler(win, "trayview", {
@@ -437,6 +445,33 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 		this.present(win);
 		this.emitState(true);
 		return win.id;
+	}
+
+	isActive(): boolean {
+		const win = this.getWindow();
+		return !!win && this._shown;
+	}
+
+	async setActive(active: boolean): Promise<boolean> {
+		if (!active) {
+			if (this._pinned) this.setPinned(false);
+			const win = this.getWindow();
+			if (win && !win.isDestroyed()) win.hide();
+			this._shown = false;
+			this.emitState(false);
+			return false;
+		}
+		const win = await this.ensureWindow();
+		if (!this._pinned) this.setPinned(true);
+		this.present(win);
+		if (!win.isDestroyed()) win.focus();
+		this._shown = true;
+		this.emitState(true);
+		return true;
+	}
+
+	async toggleActive(): Promise<boolean> {
+		return this.setActive(!this.isActive());
 	}
 
 	async hide(): Promise<void> {

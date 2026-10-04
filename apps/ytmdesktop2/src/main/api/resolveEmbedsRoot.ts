@@ -1,8 +1,8 @@
+import fs from "node:fs";
+import path from "node:path";
 import { isDevelopment } from "@main/infra/devUtils";
 import { createLogger } from "@shared/utils/console";
 import { app } from "electron";
-import fs from "node:fs";
-import path from "node:path";
 
 const log = createLogger("api-embeds");
 
@@ -13,11 +13,6 @@ function withUnpackedTwin(dir: string): string[] {
 	return [dir];
 }
 
-/**
- * Resolve built embed assets root (`…/now-playing/index.html` lives under this).
- * Dev + prod: `resources/embeds` (built by electron-vite sidecar plugin).
- * Packaged builds unpack `resources/**` -> prefer `app.asar.unpacked`.
- */
 export function resolveEmbedsRoot(): string | null {
 	const candidates: string[] = [];
 	const push = (dir: string | null | undefined) => {

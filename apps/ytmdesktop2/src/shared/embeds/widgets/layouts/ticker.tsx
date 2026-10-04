@@ -1,9 +1,12 @@
-import { C, CardFrame, CoverArt, Shell, emptyLabel, showArt, tickerLine, type LayoutProps } from "../chrome";
+import { C, CardFrame, CoverArt, type LayoutProps, Shell, showArt, tickerLine, useEmbedTheme,
+	useIdleLabel } from "../chrome";
 
 export function TickerLayout({ track, flags, accent, src, className, status }: LayoutProps) {
 	const idle = !track;
-	const label = emptyLabel(status);
+	const theme = useEmbedTheme();
+	const label = useIdleLabel(status);
 	const line = idle ? label : tickerLine(track, flags);
+	const hideLine = line === null;
 
 	return (
 		<Shell flags={flags} layout="ticker" className={className} playing={track?.playing} idle={idle}>
@@ -41,13 +44,13 @@ export function TickerLayout({ track, flags, accent, src, className, status }: L
 								: "linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)",
 						}}
 					>
-						{idle ? (
+						{hideLine ? null : idle ? (
 							<div
 								style={{
 									fontSize: 14,
 									fontWeight: 600,
 									lineHeight: 1,
-									color: C.muted,
+									color: theme.color.artist,
 									whiteSpace: "nowrap",
 									overflow: "hidden",
 									textOverflow: "ellipsis",

@@ -5,7 +5,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui
 import { Slider } from "@/components/ui/slider";
 import { useSettingsState } from "@/hooks/use-settings";
 
-export const Route = createFileRoute("/_settings/trayview-settings")({
+export const Route = createFileRoute("/_settings/extensions/trayview")({
     component: TrayViewSettingsPage,
 });
 
@@ -26,7 +26,7 @@ function TrayViewSettingsPage() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>TrayView Settings</CardTitle>
+                <CardTitle>Tray View</CardTitle>
                 <CardDescription>Behavior and appearance of the compact now-playing popup.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -49,7 +49,7 @@ function TrayViewSettingsPage() {
                                 setOpacityPercent(next);
                             }}
                         />
-                        <FieldDescription>How see-through the tray popup is. With &quot;Dim only on hover&quot; on, this is the hovered opacity.</FieldDescription>
+                        <FieldDescription>How transparent the tray popup is. With &quot;Dim only on hover&quot; on, this is the hovered opacity.</FieldDescription>
                     </Field>
                     <SettingsCheckbox
                         configKey="trayView.clickThrough"

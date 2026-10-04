@@ -18,6 +18,8 @@ export const appServiceRouter = router({
 	version: publicProcedure.query(({ ctx }): string => provider(ctx, "app").app.getVersion()),
 	openFile: publicProcedure.input(z.string()).mutation(({ ctx, input }) => provider(ctx, "app").handleOpenFile(null as unknown as Electron.IpcMainInvokeEvent, input)),
 	openLogsFolder: publicProcedure.mutation(({ ctx }) => provider(ctx, "app").openLogsFolder()),
+	/** Native image picker; resolves to a file:// URL, or null when cancelled. */
+	pickImageFile: publicProcedure.mutation(({ ctx }) => provider(ctx, "app").pickImageFile()),
 	minimize: publicProcedure.mutation(({ ctx }): void => {
 		const window = ctx.getBrowserWindow();
 		if (window?.isMinimizable?.()) window.minimize?.();

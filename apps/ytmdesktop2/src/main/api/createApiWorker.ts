@@ -1,9 +1,11 @@
+import { fileURLToPath } from "node:url";
 import { type ApiServerHandle, startApiServer } from "@main/api/server";
 import { appAuth, readAuthClients } from "@main/auth";
 import { createMainCaller } from "@main/trpc/caller";
 import type ApiProvider from "@main/trpc/routers/api/service";
 import type SettingsProvider from "@main/trpc/routers/settings/service";
 import { API_ROUTES } from "@shared/constants/eventNames";
+import { EMBED_EXTENDED_SETTINGS_KEY, EMBED_IDLE_IMAGE_PATH, isFileUrl } from "@shared/embeds/theme";
 import { createLogger } from "@shared/utils/console";
 import type { BrowserWindow } from "electron";
 
@@ -21,8 +23,25 @@ export const createApiWorker = async (api: ApiProvider, parent?: BrowserWindow):
 
 	const trackCaller = () => createMainCaller().track;
 	const navCaller = () => createMainCaller().navigation;
+	const settingsProvider = () => api.getProvider<SettingsProvider, "settings">("settings");
 	const apiMap: Record<string, (...args: any[]) => Promise<unknown> | unknown> = {
 		"api/routes": () => api.getRoutes(),
+		"api/embed-config": () => {
+			const config = settingsProvider().get<Record<string, unknown> | null>(EMBED_EXTENDED_SETTINGS_KEY, null);
+			const idleImage = config && typeof config.idleImage === "string" ? config.idleImage : null;
+			// A file:// URL cannot be fetched by the embed, so point it at our own route.
+			if (!isFileUrl(idleImage)) return config;
+			return { ...config, idleImage: EMBED_IDLE_IMAGE_PATH };
+		},
+		"api/embed-idle-image": () => {
+			const idleImage = settingsProvider().get<string | null>(`${EMBED_EXTENDED_SETTINGS_KEY}.idleImage`, null);
+			if (!isFileUrl(idleImage)) return null;
+			try {
+				return fileURLToPath(idleImage as string);
+			} catch {
+				return null;
+			}
+		},
 		[API_ROUTES.TRACK_CONTROL_NEXT]: () => trackCaller().next(),
 		[API_ROUTES.TRACK_CONTROL_PREV]: () => trackCaller().prev(),
 		[API_ROUTES.TRACK_CONTROL_BACKWARD]: (data?: { time?: number }) => trackCaller().backward({ time: data?.time ?? 0 }),

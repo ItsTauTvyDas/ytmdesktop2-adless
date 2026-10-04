@@ -1,8 +1,10 @@
-import { BleedArt, C, Shell, emptyLabel, formatTime, type LayoutProps } from "../chrome";
+import { BleedArt, C, formatTime, type LayoutProps, Shell, useEmbedTheme,
+	useIdleLabel } from "../chrome";
 
 export function FullscreenLayout({ track, flags, accent, src, className, status }: LayoutProps) {
 	const idle = !track;
-	const label = emptyLabel(status);
+	const theme = useEmbedTheme();
+	const label = useIdleLabel(status);
 	const pct =
 		!idle && track.duration > 0 ? Math.min(100, Math.max(0, (track.progress / track.duration) * 100)) : 0;
 
@@ -30,21 +32,21 @@ export function FullscreenLayout({ track, flags, accent, src, className, status 
 						maxWidth: 960,
 					}}
 				>
-					{flags.title || idle ? (
+					{(idle ? label !== null : flags.title) ? (
 						<div
 							style={{
 								fontSize: 36,
 								fontWeight: 700,
 								lineHeight: 1.15,
 								textShadow: "0 2px 20px rgba(0,0,0,0.7)",
-								color: idle ? C.muted : undefined,
+								color: idle ? theme.color.artist : theme.color.title,
 							}}
 						>
 							{idle ? label : track.title}
 						</div>
 					) : null}
 					{!idle && flags.artist ? (
-						<div style={{ fontSize: 18, color: C.muted, textShadow: "0 1px 12px rgba(0,0,0,0.7)" }}>{track.artist}</div>
+						<div style={{ fontSize: 18, color: theme.color.artist, textShadow: "0 1px 12px rgba(0,0,0,0.7)" }}>{track.artist}</div>
 					) : null}
 					{!idle && flags.progress ? (
 						<div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4, maxWidth: 480 }}>
@@ -65,7 +67,7 @@ export function FullscreenLayout({ track, flags, accent, src, className, status 
 									gap: 10,
 									fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
 									fontSize: 12,
-									color: C.muted,
+									color: theme.color.artist,
 									fontVariantNumeric: "tabular-nums",
 								}}
 							>

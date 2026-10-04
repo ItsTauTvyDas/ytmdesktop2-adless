@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import { type ServerType, serve, upgradeWebSocket } from "@hono/node-server";
 import { resolveEmbedsRoot } from "@main/api/resolveEmbedsRoot";
 import { tryServeEmbedFile } from "@main/api/serveEmbeds";
@@ -11,8 +13,6 @@ import { createLogger } from "@shared/utils/console";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { WSContext } from "hono/ws";
-import fs from "node:fs/promises";
-import path from "node:path";
 import { WebSocketServer } from "ws";
 
 const log = createLogger("api-server");
@@ -38,6 +38,21 @@ function resolveApiPort(config: SettingsStore): number {
 		return DEFAULT_API_PORT;
 	}
 	return port;
+}
+
+const IMAGE_TYPES: Record<string, string> = {
+	".png": "image/png",
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".gif": "image/gif",
+	".webp": "image/webp",
+	".bmp": "image/bmp",
+	".avif": "image/avif",
+	".svg": "image/svg+xml",
+};
+
+function imageContentType(filePath: string): string {
+	return IMAGE_TYPES[path.extname(filePath).toLowerCase()] ?? "application/octet-stream";
 }
 
 function extractBearerToken(header: string | undefined): string | null {
@@ -128,6 +143,26 @@ export async function startApiServer(options: {
 			embeds: embedsRoot ? ["/embed/now-playing"] : [],
 		}),
 	);
+
+	app.get("/embed/config", async (c) => c.json((await onRequest("api/embed-config")) ?? null));
+
+	/**
+	 * The idle image the user picked, by path from settings only. The request carries
+	 * no path of its own, so there is nothing here to traverse.
+	 */
+	app.get("/embed/idle-image", async (c) => {
+		const filePath = (await onRequest("api/embed-idle-image")) as string | null;
+		if (!filePath) return c.json({ error: "no idle image configured" }, 404);
+		try {
+			const data = await fs.readFile(filePath);
+			return c.body(data as unknown as ArrayBuffer, 200, {
+				"Content-Type": imageContentType(filePath),
+				"Cache-Control": "no-cache",
+			});
+		} catch {
+			return c.json({ error: "idle image unreadable" }, 404);
+		}
+	});
 
 	/** Public static OBS embeds (auth is on /track via ?token=). */
 	app.get("/embed/now-playing", async (c) => {
