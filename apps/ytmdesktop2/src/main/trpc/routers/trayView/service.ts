@@ -1,8 +1,10 @@
 import { platform } from "@electron-toolkit/utils";
 import { AfterInit, BaseProvider, OnDestroy } from "@main/core/baseProvider";
+import { type AltGestureState, initialAltGestureState, isAltEngaged, nextAltGestureState } from "@main/domain/altGesture";
 import { showOnActiveDesktop } from "@main/domain/showOnActiveDesktop";
 import { positionNearTray } from "@main/domain/trayPosition";
 import { isAppQuitting, shouldCancelWindowClose } from "@main/handlers/quitPolicy";
+import { type GlobalInputProbe, getGlobalInputProbe } from "@main/infra/globalInput";
 import SettingsProvider from "@main/trpc/routers/settings/service";
 import TrayProvider from "@main/trpc/routers/tray/service";
 import { createAppWindow, wrapWindowHandler } from "@main/windows/windowUtils";
@@ -11,6 +13,11 @@ import { debounce } from "lodash-es";
 
 const TRAY_VIEW_WIDTH = 420;
 const TRAY_VIEW_HEIGHT = 168;
+const OPACITY_FADE_MS = 180;
+const OPACITY_FRAME_MS = 16;
+const INPUT_POLL_IDLE_MS = 100;
+const INPUT_POLL_ACTIVE_MS = 16;
+const OPACITY_EPSILON = 0.005;
 
 function clampToVisibleWorkArea(x: number, y: number): { x: number; y: number } {
 	const b = screen.getDisplayNearestPoint({ x, y }).workArea;
@@ -29,51 +36,154 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 	private _restoredBounds: { x: number; y: number } | null = null;
 	private persistMoved = debounce(() => this._saveWindowState?.(), 250);
 	private _settingsWired = false;
-    private _clickThroughEnabled = false;
-    private _altOverride = false;
-    private _opacityHoverEnabled = false;
-    private _hovered = false;
+	private _clickThroughEnabled = false;
+	private _altOverride = false;
+	private _opacityHoverEnabled = false;
+	private _hovered = false;
+	private _opacityCurrent = 1;
+	private _opacityAnim: NodeJS.Timeout | null = null;
+	private _inputPoll: NodeJS.Timeout | null = null;
+	private _inputPollMs = 0;
+	private _inputProbe: GlobalInputProbe | null | undefined;
+	private _altFromRenderer = false;
+	private _altGesture: AltGestureState = initialAltGestureState;
 
 	constructor(_app: App) {
 		super("trayView");
 	}
 
-    private applyClickThrough() {
-        const win = this.getWindow();
-        if (!win || win.isDestroyed()) return;
-        // Ignore mouse events only when the setting is on AND Alt isn't overriding it.
-        const shouldIgnore = this._clickThroughEnabled && !this._altOverride;
-        win.setIgnoreMouseEvents(shouldIgnore, { forward: true });
-    }
+	private applyClickThrough() {
+		const win = this.getWindow();
+		if (!win || win.isDestroyed()) return;
+		const shouldIgnore = this._clickThroughEnabled && !this._altOverride;
+		if (shouldIgnore) win.setIgnoreMouseEvents(true, { forward: true });
+		else win.setIgnoreMouseEvents(false);
+	}
 
-    private static isAltKey(input: Electron.Input): boolean {
-        return input.key === "Alt" || input.code === "AltLeft" || input.code === "AltRight";
-    }
+	private static isAltKey(input: Electron.Input): boolean {
+		return input.key === "Alt" || input.code === "AltLeft" || input.code === "AltRight";
+	}
 
-    private currentOpacity(): number {
-        const configured = this.clampOpacity(this.settings.get("trayView.opacity", 1));
-        if (!this._opacityHoverEnabled) return configured;
-        // Full opacity at rest unless hovered
-        return this._hovered ? configured : 1;
-    }
+	private targetOpacity(): number {
+		const configured = this.clampOpacity(this.settings.get("trayView.opacity", 1));
+		if (!this._opacityHoverEnabled) return configured;
+		if (!this._hovered) return 1;
+		return this._altOverride ? 1 : configured;
+	}
 
-    private applyOpacity() {
-        const win = this.getWindow();
-        if (!win || win.isDestroyed()) return;
-        win.setOpacity(this.currentOpacity());
-    }
+	private stopOpacityAnim() {
+		if (!this._opacityAnim) return;
+		clearInterval(this._opacityAnim);
+		this._opacityAnim = null;
+	}
 
-    setHovered(hovered: boolean) {
-        if (this._hovered === hovered) return;
-        this._hovered = hovered;
-        this.applyOpacity();
-    }
+	private pushOpacity(win: BrowserWindow, value: number) {
+		this._opacityCurrent = value;
+		win.setOpacity(value);
+	}
 
-    setAltOverride(altOverride: boolean) {
-        if (this._altOverride === altOverride) return;
-        this._altOverride = altOverride;
-        this.applyClickThrough();
-    }
+	private applyOpacity(animate = false) {
+		const win = this.getWindow();
+		if (!win || win.isDestroyed()) return;
+		this.stopOpacityAnim();
+		const target = this.targetOpacity();
+		const from = this._opacityCurrent;
+		if (!animate || Math.abs(target - from) < OPACITY_EPSILON) {
+			this.pushOpacity(win, target);
+			return;
+		}
+		const startedAt = Date.now();
+		this._opacityAnim = setInterval(() => {
+			const live = this.getWindow();
+			if (!live || live.isDestroyed()) {
+				this.stopOpacityAnim();
+				return;
+			}
+			const t = Math.min(1, (Date.now() - startedAt) / OPACITY_FADE_MS);
+			const eased = 1 - (1 - t) ** 3;
+			this.pushOpacity(live, from + (target - from) * eased);
+			if (t >= 1) this.stopOpacityAnim();
+		}, OPACITY_FRAME_MS);
+	}
+
+	private get inputProbe(): GlobalInputProbe | null {
+		if (this._inputProbe === undefined) this._inputProbe = getGlobalInputProbe();
+		return this._inputProbe;
+	}
+
+	private updateInputTracking() {
+		const win = this.getWindow();
+		const needed = !!win && !win.isDestroyed() && win.isVisible() && (this._opacityHoverEnabled || this._clickThroughEnabled);
+		if (!needed) {
+			this.stopInputTracking();
+			return;
+		}
+		this.pollInput();
+	}
+
+	private stopInputTracking() {
+		if (this._inputPoll) {
+			clearInterval(this._inputPoll);
+			this._inputPoll = null;
+			this._inputPollMs = 0;
+		}
+		this._altGesture = initialAltGestureState;
+		this.applyAlt(false);
+		this.setHovered(false);
+	}
+
+	private schedulePoll(intervalMs: number) {
+		if (this._inputPoll && this._inputPollMs === intervalMs) return;
+		if (this._inputPoll) clearInterval(this._inputPoll);
+		this._inputPollMs = intervalMs;
+		this._inputPoll = setInterval(() => this.pollInput(), intervalMs);
+	}
+
+	private pollInput() {
+		const win = this.getWindow();
+		if (!win || win.isDestroyed() || !win.isVisible()) {
+			this.stopInputTracking();
+			return;
+		}
+		const { x, y } = screen.getCursorScreenPoint();
+		const b = win.getBounds();
+		const inside = x >= b.x && x < b.x + b.width && y >= b.y && y < b.y + b.height;
+		const probe = this.inputProbe;
+		const sample = {
+			inside,
+			altDown: probe ? probe.altDown() : this._altFromRenderer,
+			mouseDown: probe ? probe.mouseDown() : false,
+		};
+		this._altGesture = nextAltGestureState(this._altGesture, sample);
+
+		this.applyAlt(isAltEngaged(this._altGesture, sample));
+		this.setHovered(inside);
+		this.schedulePoll(inside || this._altGesture.latched ? INPUT_POLL_ACTIVE_MS : INPUT_POLL_IDLE_MS);
+	}
+
+	private setHovered(hovered: boolean) {
+		if (this._hovered === hovered) return;
+		this._hovered = hovered;
+		this.applyOpacity(true);
+	}
+
+	isAltHeld(): boolean {
+		return this._altOverride;
+	}
+
+	private applyAlt(held: boolean) {
+		if (this._altOverride === held) return;
+		this._altOverride = held;
+		this.applyClickThrough();
+		this.applyOpacity(!held);
+		this.windowContext.sendToAllViews("trayview.input", { altHeld: held });
+	}
+
+	reportAltFromRenderer(held: boolean) {
+		this._altFromRenderer = held;
+		if (this.inputProbe) return;
+		this.applyAlt(this._hovered && held);
+	}
 
 	private get settings(): SettingsProvider {
 		return this.getProvider("settings");
@@ -89,29 +199,31 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
         return Math.min(1, Math.max(0.3, n));
     }
 
-    async AfterInit() {
-        this._pinned = !!this.settings.get("trayView.pinned", false);
-        this._clickThroughEnabled = !!this.settings.get("trayView.clickThrough", false);
-        this._opacityHoverEnabled = !!this.settings.get("trayView.applyOpacityOnHover", false);
-        if (!this._settingsWired) {
-            this._settingsWired = true;
-            this.settings.onSettingChange("trayView.pinned", (value) => {
-                const pinned = !!value;
-                if (pinned === this._pinned) return;
-                this.setPinned(pinned, false);
-            });
-            this.settings.onSettingChange("trayView.opacity", () => this.applyOpacity());
-            this.settings.onSettingChange("trayView.applyOpacityOnHover", (value) => {
-                this._opacityHoverEnabled = !!value;
-                this.applyOpacity();
-            });
-            this.settings.onSettingChange("trayView.clickThrough", (value) => {
-                this._clickThroughEnabled = !!value;
-                this.applyClickThrough();
-            });
-        }
-        void this.tryRestorePinned();
-    }
+	async AfterInit() {
+		this._pinned = !!this.settings.get("trayView.pinned", false);
+		this._clickThroughEnabled = !!this.settings.get("trayView.clickThrough", false);
+		this._opacityHoverEnabled = !!this.settings.get("trayView.applyOpacityOnHover", false);
+		if (!this._settingsWired) {
+			this._settingsWired = true;
+			this.settings.onSettingChange("trayView.pinned", (value) => {
+				const pinned = !!value;
+				if (pinned === this._pinned) return;
+				this.setPinned(pinned, false);
+			});
+			this.settings.onSettingChange("trayView.opacity", () => this.applyOpacity());
+			this.settings.onSettingChange("trayView.applyOpacityOnHover", (value) => {
+				this._opacityHoverEnabled = !!value;
+				this.updateInputTracking();
+				this.applyOpacity();
+			});
+			this.settings.onSettingChange("trayView.clickThrough", (value) => {
+				this._clickThroughEnabled = !!value;
+				this.updateInputTracking();
+				this.applyClickThrough();
+			});
+		}
+		void this.tryRestorePinned();
+	}
 
 	private async tryRestorePinned() {
 		this._pinned = !!this.settings.get("trayView.pinned", false);
@@ -136,6 +248,7 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 		win.show();
 		win.moveTop();
 		this.restorePosition(win);
+		this.updateInputTracking();
 		this.emitState(true);
 	}
 
@@ -185,14 +298,20 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			win.webContents.setBackgroundThrottling(false);
 			this._hovered = false;
 			this._altOverride = false;
-            this.windowContext.views.trayViewWindow = win;
-            win.webContents.on("before-input-event", (_event, input) => {
-                if (!TrayViewProvider.isAltKey(input)) return;
-                const down = input.type === "keyDown" || input.type === "rawKeyDown";
-                this.setAltOverride(down);
-            });
-            this.applyOpacity();
-            this.applyClickThrough();
+			this._opacityCurrent = 1;
+			this.windowContext.views.trayViewWindow = win;
+			win.webContents.on("before-input-event", (_event, input) => {
+				if (!TrayViewProvider.isAltKey(input)) return;
+				const down = input.type === "keyDown" || input.type === "rawKeyDown";
+				this.reportAltFromRenderer(down);
+			});
+			this.applyOpacity();
+			this.applyClickThrough();
+			win.on("show", () => this.updateInputTracking());
+			win.on("hide", () => {
+				this.stopInputTracking();
+				this.applyOpacity();
+			});
 
 			const { state, saveState, restored } = await wrapWindowHandler(win, "trayview", {
 				width: TRAY_VIEW_WIDTH,
@@ -219,12 +338,9 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 				ev.preventDefault();
 				dismiss();
 			});
-            win.on("blur", () => {
-                if (this._altOverride) {
-                    this._altOverride = false;
-                    this.applyClickThrough();
-                }
-                if (win.isDestroyed() || !win.isVisible()) return;
+			win.on("blur", () => {
+				this._altFromRenderer = false;
+				if (win.isDestroyed() || !win.isVisible()) return;
                 if (this._pinned) return;
                 if (Date.now() < this._suppressBlurUntil) return;
                 this._blurHiddenAt = Date.now();
@@ -363,6 +479,8 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 
 	async OnDestroy() {
 		this.persistMoved.cancel();
+		this.stopOpacityAnim();
+		this.stopInputTracking();
 		this._saveWindowState?.();
 		const win = this.getWindow();
 		if (!win) return;
