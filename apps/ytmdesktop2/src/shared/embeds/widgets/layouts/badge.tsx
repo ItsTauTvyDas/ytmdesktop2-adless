@@ -4,7 +4,6 @@ import {
 	ART_DURATION,
 	ART_EASE,
 	C,
-	CARD_RADIUS,
 	CardFrame,
 	CoverArt,
 	type LayoutProps,
@@ -40,7 +39,7 @@ export function BadgeLayout({ track, flags, accent, src, className, status }: La
 				style={{
 					maxWidth: BADGE_MAX_WIDTH,
 					overflow: "hidden",
-					borderRadius: CARD_RADIUS,
+					borderRadius: theme.radius.embed,
 				}}
 			>
 				<CardFrame
@@ -50,7 +49,7 @@ export function BadgeLayout({ track, flags, accent, src, className, status }: La
 					style={{
 						width: "max-content",
 						maxWidth: BADGE_MAX_WIDTH,
-						borderRadius: CARD_RADIUS,
+						borderRadius: theme.radius.embed,
 					}}
 				>
 					<div

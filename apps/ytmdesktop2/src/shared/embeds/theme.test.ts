@@ -26,7 +26,7 @@ describe("resolveEmbedTheme", () => {
 		expect(theme.text.idle).toBe("Nothing playing");
 		expect(theme.text.artPlaceholder).toBe("YTM");
 		expect(theme.color.progress).toBe(EMBED_ACCENT);
-		expect(theme.radius).toEqual({ art: 8, progress: 12 });
+		expect(theme.radius).toEqual({ embed: 12, art: 8, progress: 12 });
 		expect(theme.idleImage).toBeNull();
 	});
 
@@ -41,7 +41,14 @@ describe("resolveEmbedTheme", () => {
 	it("ignores blank colours and out-of-range radii", () => {
 		const theme = resolveEmbedTheme({ color: { title: "   " }, radius: { art: -5, progress: 9999 } });
 		expect(theme.color.title).toBe("#f4f4f5");
-		expect(theme.radius).toEqual({ art: 8, progress: 12 });
+		expect(theme.radius).toEqual({ embed: 12, art: 8, progress: 12 });
+	});
+
+	it("clamps each radius independently", () => {
+		const theme = resolveEmbedTheme({ radius: { embed: 999, art: 4 } });
+		expect(theme.radius.embed).toBe(32);
+		expect(theme.radius.art).toBe(4);
+		expect(theme.radius.progress).toBe(12);
 	});
 
 	it("resolves the progress fill against the album accent", () => {

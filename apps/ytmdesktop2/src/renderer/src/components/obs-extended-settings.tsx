@@ -226,7 +226,7 @@ function RadiusRow({
 	max,
 	fallback,
 }: {
-	settingKey: "art" | "progress";
+	settingKey: "embed" | "art" | "progress";
 	label: string;
 	description: string;
 	max: number;
@@ -235,12 +235,18 @@ function RadiusRow({
 	const id = useId();
 	const [value, setValue] = useSettingsState<number>(`${KEY}.radius.${settingKey}`, fallback);
 	const current = typeof value === "number" && Number.isFinite(value) ? value : fallback;
+	const isDefault = current === fallback;
 
 	return (
 		<Field>
 			<div className="flex items-center justify-between gap-4">
 				<FieldLabel htmlFor={id}>{label}</FieldLabel>
-				<span className="tabular-nums text-sm text-muted-foreground">{current}px</span>
+				<div className="flex items-center gap-2">
+					<span className="tabular-nums text-sm text-muted-foreground">{current}px</span>
+					<Button type="button" size="sm" variant="ghost" disabled={isDefault} onClick={() => setValue(fallback)}>
+						Reset
+					</Button>
+				</div>
 			</div>
 			<Slider
 				id={id}
@@ -267,10 +273,17 @@ export function ObsShapeCard() {
 					Shape
 					<ExtendedBadge />
 				</CardTitle>
-				<CardDescription>Corner rounding for the two elements where it reads at a glance on stream.</CardDescription>
+				<CardDescription>Corner rounding, from the outside in.</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<FieldGroup>
+					<RadiusRow
+						settingKey="embed"
+						label="Embed rounding"
+						description="The outer corners of the whole overlay. Applies to the default, compact, stack, ticker and badge layouts. The text layout has no frame and fullscreen fills the canvas, so neither is affected."
+						max={EMBED_RADIUS_MAX.embed}
+						fallback={EMBED_RADIUS_DEFAULTS.embed}
+					/>
 					<RadiusRow
 						settingKey="art"
 						label="Album art rounding"

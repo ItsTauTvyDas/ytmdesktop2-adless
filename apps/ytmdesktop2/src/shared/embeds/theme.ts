@@ -1,7 +1,7 @@
 export interface EmbedExtendedConfig {
 	readonly text?: Partial<Record<EmbedTextKey, string>>;
 	readonly color?: Partial<Record<EmbedColorKey, string>>;
-	readonly radius?: { readonly art?: number; readonly progress?: number };
+	readonly radius?: { readonly embed?: number; readonly art?: number; readonly progress?: number };
 	readonly idleImage?: string;
 }
 
@@ -29,13 +29,13 @@ export const EMBED_COLOR_DEFAULTS: Record<EmbedColorKey, string> = {
 	progress: EMBED_ACCENT,
 };
 
-export const EMBED_RADIUS_DEFAULTS = { art: 8, progress: 12 } as const;
-export const EMBED_RADIUS_MAX = { art: 32, progress: 12 } as const;
+export const EMBED_RADIUS_DEFAULTS = { embed: 12, art: 8, progress: 12 } as const;
+export const EMBED_RADIUS_MAX = { embed: 32, art: 32, progress: 12 } as const;
 
 export interface EmbedTheme {
 	readonly text: Readonly<Record<EmbedTextKey, string | null>>;
 	readonly color: Readonly<Record<EmbedColorKey, string>>;
-	readonly radius: { readonly art: number; readonly progress: number };
+	readonly radius: { readonly embed: number; readonly art: number; readonly progress: number };
 	readonly idleImage: string | null;
 }
 
@@ -69,6 +69,7 @@ export function resolveEmbedTheme(config: EmbedExtendedConfig | null | undefined
 		text,
 		color,
 		radius: {
+			embed: resolveRadius(config?.radius?.embed, EMBED_RADIUS_DEFAULTS.embed, EMBED_RADIUS_MAX.embed),
 			art: resolveRadius(config?.radius?.art, EMBED_RADIUS_DEFAULTS.art, EMBED_RADIUS_MAX.art),
 			progress: resolveRadius(config?.radius?.progress, EMBED_RADIUS_DEFAULTS.progress, EMBED_RADIUS_MAX.progress),
 		},

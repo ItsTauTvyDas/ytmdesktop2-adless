@@ -21,7 +21,6 @@ export const C = {
 export const FONT = '"Segoe UI", system-ui, -apple-system, sans-serif';
 export const ART_EASE = [0.16, 1, 0.3, 1] as const;
 export const ART_DURATION = 0.28;
-export const CARD_RADIUS = 12;
 
 const ThemeContext = createContext<EmbedTheme>(defaultEmbedTheme());
 
@@ -377,13 +376,14 @@ export function CardFrame({
 	children: ReactNode;
 	style?: CSSProperties;
 }) {
+	const theme = useEmbedTheme();
 	return (
 		<div
 			style={{
 				position: "relative",
 				display: "flex",
 				overflow: "hidden",
-				borderRadius: CARD_RADIUS,
+				borderRadius: theme.radius.embed,
 				border: `1px solid ${C.border}`,
 				background: flags.transparent ? "transparent" : C.bg,
 				boxShadow: flags.transparent ? "none" : "0 8px 28px rgba(0,0,0,0.35)",
