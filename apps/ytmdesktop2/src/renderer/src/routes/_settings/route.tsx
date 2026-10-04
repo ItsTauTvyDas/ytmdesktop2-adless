@@ -86,7 +86,7 @@ const appearanceSubs = [
 ] as const;
 
 const socials = [
-	{ href: "https://github.com/Venipa/ytmdesktop2", label: "GitHub", icon: RiGithubFill },
+	{ href: "https://github.com/ItsTauTvyDas/ytmdesktop2-adless", label: "GitHub", icon: RiGithubFill },
 	{ href: "https://youtube-music.app", label: "Website", icon: RiGlobalLine },
 ] as const;
 
@@ -326,7 +326,11 @@ function SettingsLayout() {
 						</SidebarGroup>
 					</SidebarContent>
 					<SidebarFooter className="gap-y-2 border-t border-sidebar-border py-3 px-0">
-						<div className="flex flex-col gap-1 px-3 text-[10px] text-muted-foreground">
+                        <div className="flex flex-col gap-1 px-3 text-[10px] text-muted-foreground">
+                            <span>Enhanced by ItsTauTvyDas! Happy listening :3</span>
+                        </div>
+                        <SidebarSeparator className="p-0 m-0" />
+                        <div className="flex flex-col gap-1 px-3 text-[10px] text-muted-foreground">
 							<span>
 								v{window.api.version} ({window.app.environment})
 							</span>
