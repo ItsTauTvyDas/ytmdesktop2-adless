@@ -26,10 +26,8 @@ describe("alt gesture latch", () => {
 		const engaged = run([
 			sample({ inside: true, altDown: true }),
 			sample({ inside: true, altDown: true, mouseDown: true }),
-			// Alt let go mid-gesture — still engaged.
 			sample({ inside: true, mouseDown: true }),
 			sample({ inside: true, mouseDown: true }),
-			// Button released — latch ends.
 			sample({ inside: true }),
 		]);
 		expect(engaged).toEqual([true, true, true, true, false]);
@@ -55,7 +53,7 @@ describe("alt gesture latch", () => {
 		expect(engaged).toEqual([true, true, true, false]);
 	});
 
-	it("never latches a press made without Alt — that click passed through", () => {
+	it("never latches a press made without Alt, since that click passed through", () => {
 		const engaged = run([
 			sample({ inside: true }),
 			sample({ inside: true, mouseDown: true }),
