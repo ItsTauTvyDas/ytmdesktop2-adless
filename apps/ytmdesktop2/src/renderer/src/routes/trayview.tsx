@@ -5,7 +5,18 @@ import { intervalToDuration } from "date-fns";
 import { clamp } from "lodash-es";
 import { ArrowLeftIcon, GripVerticalIcon, PinIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { type ButtonHTMLAttributes, type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+	type ButtonHTMLAttributes,
+	createContext,
+	type MouseEvent,
+	useCallback,
+	useContext,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import ApiIcon from "@/assets/icons/chip.svg?react";
 import DiscordIcon from "@/assets/icons/discord-rpc.svg?react";
 import LastFMIcon from "@/assets/icons/lastfm.svg?react";
@@ -161,6 +172,7 @@ function TrayBleedArt({ src, accent }: { src: string | null; accent: string | nu
 
 function TrayAccentPill({ accent, drag, expanded }: { accent: string | null; drag?: boolean; expanded?: boolean }) {
 	const [dragLayer, setDragLayer] = useState(false);
+	const hoverable = useHoverable();
 
 	useEffect(() => {
 		if (!drag || !expanded) {
@@ -193,7 +205,7 @@ function TrayAccentPill({ accent, drag, expanded }: { accent: string | null; dra
 					className={cn("size-3.5 shrink-0 text-background/80 transition-opacity duration-200", expanded ? "opacity-100" : "opacity-0")}
 				/>
 			</motion.div>
-			{dragLayer ? <div className="drag absolute inset-0 z-10 cursor-grab" /> : null}
+			{dragLayer ? <div className={cn("drag absolute inset-0 z-10", hoverable ? "cursor-grab" : "cursor-default")} /> : null}
 		</div>
 	);
 }
@@ -230,20 +242,30 @@ function TrayCoverArt({ src }: { src: string | null }) {
 	);
 }
 
+const HoverableContext = createContext(true);
+const useHoverable = () => useContext(HoverableContext);
+
 const chromeButtonVariants = cva(
 	[
-		"inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-[transform,background-color,color] duration-100",
-		"enabled:hover:bg-accent/20 enabled:hover:text-foreground enabled:active:scale-95",
+		"inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-[transform,background-color,color] duration-100",
 		"disabled:pointer-events-none disabled:opacity-40",
 		"[&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0",
 	].join(" "),
-	{ variants: { variant: { default: "" } }, defaultVariants: { variant: "default" } },
+	{
+		variants: {
+			variant: { default: "" },
+			hoverable: {
+				true: "cursor-pointer enabled:hover:bg-accent/20 enabled:hover:text-foreground enabled:active:scale-95",
+				false: "cursor-default",
+			},
+		},
+		defaultVariants: { variant: "default", hoverable: true },
+	},
 );
 
 const playerButtonVariants = cva(
 	[
-		"inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-[transform,background-color,color] duration-100",
-		"enabled:hover:bg-foreground/10 enabled:active:scale-95",
+		"inline-flex size-8 shrink-0 items-center justify-center rounded-full text-foreground transition-[transform,background-color,color] duration-100",
 		"disabled:pointer-events-none disabled:opacity-50",
 		"[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
 		"data-[active=true]:text-accent",
@@ -254,24 +276,37 @@ const playerButtonVariants = cva(
 				default: "",
 				hero: "size-9 bg-foreground/10 [&_svg]:size-[1.125rem]",
 			},
+			hoverable: {
+				true: "cursor-pointer enabled:hover:bg-foreground/10 enabled:active:scale-95",
+				false: "cursor-default",
+			},
 		},
-		defaultVariants: { variant: "default" },
+		defaultVariants: { variant: "default", hoverable: true },
 	},
 );
 
 const controlToggleVariants = cva(
 	[
-		"relative inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-[transform,background-color,color,opacity] duration-100",
-		"enabled:hover:bg-accent/15 enabled:hover:text-foreground enabled:active:scale-95",
+		"relative inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[transform,background-color,color,opacity] duration-100",
 		"disabled:pointer-events-none disabled:opacity-40",
 		"[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
 		"data-[on=true]:bg-accent/20 data-[on=true]:text-foreground",
 	].join(" "),
-	{ variants: { variant: { default: "" } }, defaultVariants: { variant: "default" } },
+	{
+		variants: {
+			variant: { default: "" },
+			hoverable: {
+				true: "cursor-pointer enabled:hover:bg-accent/15 enabled:hover:text-foreground enabled:active:scale-95",
+				false: "cursor-default",
+			},
+		},
+		defaultVariants: { variant: "default", hoverable: true },
+	},
 );
 
 function ChromeButton({ className, type = "button", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
-	return <button type={type} className={cn(chromeButtonVariants(), className)} {...props} />;
+	const hoverable = useHoverable();
+	return <button type={type} className={cn(chromeButtonVariants({ hoverable }), className)} {...props} />;
 }
 
 function PlayerButton({
@@ -281,8 +316,14 @@ function PlayerButton({
 	type = "button",
 	...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "default" | "hero"; active?: boolean }) {
+	const hoverable = useHoverable();
 	return (
-		<button type={type} data-active={active ? "true" : undefined} className={cn(playerButtonVariants({ variant }), className)} {...props} />
+		<button
+			type={type}
+			data-active={active ? "true" : undefined}
+			className={cn(playerButtonVariants({ variant, hoverable }), className)}
+			{...props}
+		/>
 	);
 }
 
@@ -294,8 +335,9 @@ function ControlToggle({
 	children,
 	...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean; busy?: boolean }) {
+	const hoverable = useHoverable();
 	return (
-		<button type={type} data-on={active ? "true" : undefined} className={cn(controlToggleVariants(), className)} {...props}>
+		<button type={type} data-on={active ? "true" : undefined} className={cn(controlToggleVariants({ hoverable }), className)} {...props}>
 			{children}
 			{busy ? (
 				<span className="absolute -top-0.5 -right-0.5 flex size-3 items-center justify-center rounded-full bg-muted">
@@ -329,7 +371,9 @@ function TrayViewPage() {
 	const [leftThirdHovered, setLeftThirdHovered] = useState(false);
 	const [chromeTooltipOpen, setChromeTooltipOpen] = useState(false);
 	const altOverrideRef = useRef(false);
-	/** Portaled tooltips leave the tray DOM — keep chrome up while a chrome tooltip is open. */
+	const { data: altHeld = false } = trpc.trayView.altHeld.useQuery();
+	const [clickThrough] = useSettingsState<boolean>("trayView.clickThrough", false);
+	const passThrough = clickThrough && !altHeld;
 	const chromeVisible = contentHovered || chromeTooltipOpen || pinned;
 
 	const { mutateAsync: next } = trpc.track.next.useMutation();
@@ -342,7 +386,6 @@ function TrayViewPage() {
 	const { mutateAsync: hideTrayView } = trpc.trayView.hide.useMutation();
 	const { mutateAsync: openMain } = trpc.trayView.openMain.useMutation();
 	const { mutateAsync: toggleTrayPin } = trpc.trayView.togglePinned.useMutation();
-	const { mutate: setHovered } = trpc.trayView.setHovered.useMutation();
 	const { mutate: setAltOverride } = trpc.trayView.setAltOverride.useMutation();
 	const { mutateAsync: openSettings } = trpc.app.openSettings.useMutation();
 
@@ -350,23 +393,23 @@ function TrayViewPage() {
 		document.title = "YouTube Music - Tray";
 	}, []);
 
-	useEffect(() => {
-		setHovered(contentHovered);
-	}, [contentHovered, setHovered]);
+	const syncAlt = useCallback(
+		(held: boolean) => {
+			if (altOverrideRef.current === held) return;
+			altOverrideRef.current = held;
+			setAltOverride(held);
+		},
+		[setAltOverride],
+	);
 
 	useEffect(() => {
-		const updateAltOverride = (altOverride: boolean) => {
-			if (altOverrideRef.current === altOverride) return;
-			altOverrideRef.current = altOverride;
-			setAltOverride(altOverride);
-		};
 		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "Alt") updateAltOverride(true);
+			if (event.key === "Alt") syncAlt(true);
 		};
 		const onKeyUp = (event: KeyboardEvent) => {
-			if (event.key === "Alt") updateAltOverride(false);
+			if (event.key === "Alt") syncAlt(false);
 		};
-		const onBlur = () => updateAltOverride(false);
+		const onBlur = () => syncAlt(false);
 		window.addEventListener("keydown", onKeyDown);
 		window.addEventListener("keyup", onKeyUp);
 		window.addEventListener("blur", onBlur);
@@ -374,9 +417,9 @@ function TrayViewPage() {
 			window.removeEventListener("keydown", onKeyDown);
 			window.removeEventListener("keyup", onKeyUp);
 			window.removeEventListener("blur", onBlur);
-			updateAltOverride(false);
+			syncAlt(false);
 		};
-	}, [setAltOverride]);
+	}, [syncAlt]);
 
 	useEffect(() => {
 		const collapse = (ev: { clientX: number; clientY: number }) => {
@@ -392,6 +435,10 @@ function TrayViewPage() {
 			window.removeEventListener("blur", onBlur);
 		};
 	}, []);
+
+	trpc.trayView.onInput.useSubscription(undefined, {
+		onData: (state) => utils.trayView.altHeld.setData(undefined, !!state?.altHeld),
+	});
 
 	trpc.trayView.onState.useSubscription(undefined, {
 		onData: (state) => {
@@ -529,11 +576,12 @@ function TrayViewPage() {
 	const seekTipRef = useRef<HTMLDivElement>(null);
 	const seekTimeRef = useRef<HTMLSpanElement>(null);
 	const seekHoveringRef = useRef(false);
+	const seekClientXRef = useRef(0);
 
 	useEffect(() => {
-		if (seekHoveringRef.current) return;
+		if (seekHoveringRef.current && !passThrough) return;
 		if (seekTimeRef.current) seekTimeRef.current.textContent = currentTimeLabel;
-	}, [currentTimeLabel]);
+	}, [currentTimeLabel, passThrough]);
 
 	function syncSeekHover(clientX: number) {
 		const trackEl = seekTrackRef.current;
@@ -552,14 +600,27 @@ function TrayViewPage() {
 	}
 
 	function handleSeekHover(ev: MouseEvent<HTMLDivElement>) {
+		seekClientXRef.current = ev.clientX;
 		syncSeekHover(ev.clientX);
 	}
 
 	function handleSeekEnter(ev: MouseEvent<HTMLDivElement>) {
 		seekHoveringRef.current = true;
+		seekClientXRef.current = ev.clientX;
 		setSeekHovering(true);
 		requestAnimationFrame(() => syncSeekHover(ev.clientX));
 	}
+
+	const seekPreviewHidden = !seekHovering || passThrough;
+
+	useEffect(() => {
+		if (!seekHoveringRef.current) return;
+		if (passThrough) {
+			if (seekTimeRef.current) seekTimeRef.current.textContent = currentTimeLabel;
+			return;
+		}
+		syncSeekHover(seekClientXRef.current);
+	}, [passThrough, currentTimeLabel]);
 
 	function clearSeekHover() {
 		seekHoveringRef.current = false;
@@ -586,282 +647,284 @@ function TrayViewPage() {
 	}
 
 	return (
-		<div
-			className="absolute inset-0 flex overflow-hidden border border-border bg-background text-foreground shadow-sm"
-			onMouseEnter={(ev) => {
-				setContentHovered(true);
-				const { left, width } = ev.currentTarget.getBoundingClientRect();
-				if (width <= 0) return;
-				setLeftThirdHovered((ev.clientX - left) / width < 1 / 3);
-			}}
-			onMouseMove={(ev) => {
-				if (altOverrideRef.current !== ev.altKey) {
-					altOverrideRef.current = ev.altKey;
-					setAltOverride(ev.altKey);
-				}
-				const { left, width } = ev.currentTarget.getBoundingClientRect();
-				if (width <= 0) return;
-				const inLeftThird = (ev.clientX - left) / width < 1 / 3;
-				setLeftThirdHovered((prev) => (prev === inLeftThird ? prev : inLeftThird));
-			}}
-			onMouseLeave={(ev) => {
-				setContentHovered(false);
-				if (pointerInsideWindow(ev)) return;
-				setLeftThirdHovered(false);
-			}}
-		>
-			<TrayBleedArt src={artSrc} accent={displayAccent} />
-			<TrayAccentPill accent={displayAccent} drag={pinned} expanded={pinned && leftThirdHovered} />
+		<HoverableContext.Provider value={!passThrough}>
+			<div
+				className="absolute inset-0 flex overflow-hidden border border-border bg-background text-foreground shadow-sm"
+				onMouseEnter={(ev) => {
+					setContentHovered(true);
+					syncAlt(ev.altKey);
+					const { left, width } = ev.currentTarget.getBoundingClientRect();
+					if (width <= 0) return;
+					setLeftThirdHovered((ev.clientX - left) / width < 1 / 3);
+				}}
+				onMouseMove={(ev) => {
+					syncAlt(ev.altKey);
+					const { left, width } = ev.currentTarget.getBoundingClientRect();
+					if (width <= 0) return;
+					const inLeftThird = (ev.clientX - left) / width < 1 / 3;
+					setLeftThirdHovered((prev) => (prev === inLeftThird ? prev : inLeftThird));
+				}}
+				onMouseLeave={(ev) => {
+					setContentHovered(false);
+					syncAlt(false);
+					if (pointerInsideWindow(ev)) return;
+					setLeftThirdHovered(false);
+				}}
+			>
+				<TrayBleedArt src={artSrc} accent={displayAccent} />
+				<TrayAccentPill accent={displayAccent} drag={pinned} expanded={pinned && leftThirdHovered} />
 
-			<div className="no-drag relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
-				<div className="relative z-10 flex min-h-0 flex-1">
-					{/* Player column */}
-					<div className="relative flex min-w-0 flex-1 flex-col px-3 pt-3 pb-2">
-						{/* Chrome: fade in while pointer over content (or chrome tooltip open) */}
-						<div
-							className={cn(
-								"no-drag absolute top-2 right-2 z-20 flex items-center gap-0.5 rounded-md bg-background/60 p-0.5 shadow-sm backdrop-blur-sm",
-								"transition-[opacity,transform] duration-200 ease-out",
-								chromeVisible
-									? "pointer-events-auto translate-y-0 opacity-100"
-									: "pointer-events-none -translate-y-0.5 opacity-0",
-							)}
-						>
-							<Tooltip onOpenChange={setChromeTooltipOpen}>
-								<TooltipTrigger
-									render={
-										<ChromeButton
-											aria-label={pinned ? "Unpin" : "Pin"}
-											aria-pressed={pinned}
-											data-active={pinned ? "true" : undefined}
-											onPointerDown={(ev) => {
-												if (ev.button !== 0) return;
-												ev.preventDefault();
-												ev.stopPropagation();
-												void handlePinToggle();
-											}}
-											className={cn("no-drag", pinned && "text-foreground bg-accent/20")}
-										>
-											<PinIcon className={cn(pinned && "fill-current")} />
-										</ChromeButton>
-									}
-								/>
-								<TooltipContent side="bottom">{pinned ? "Unpin" : "Pin"}</TooltipContent>
-							</Tooltip>
-							<Tooltip onOpenChange={setChromeTooltipOpen}>
-								<TooltipTrigger
-									render={
-										<ChromeButton aria-label="Back to app" onClick={() => void openMain()}>
-											<ArrowLeftIcon />
-										</ChromeButton>
-									}
-								/>
-								<TooltipContent side="bottom">Back to app</TooltipContent>
-							</Tooltip>
-							<Tooltip onOpenChange={setChromeTooltipOpen}>
-								<TooltipTrigger
-									render={
-										<ChromeButton aria-label="Settings" onClick={() => void handleSettings()}>
-											<SettingsIcon />
-										</ChromeButton>
-									}
-								/>
-								<TooltipContent side="bottom">Settings</TooltipContent>
-							</Tooltip>
-						</div>
-
-						<div className="flex items-start gap-2.5">
-							<TrayCoverArt src={artSrc} />
-
-							<div className="min-w-0 flex-1 pt-0.5">
-								<p className="truncate text-base leading-tight font-semibold">{title}</p>
-								{artist ? <p className="mt-0.5 truncate text-sm text-muted-foreground">{artist}</p> : null}
-							</div>
-						</div>
-
-						{/* Progress + duration */}
-						<div className="mt-3 flex items-center gap-2">
-							<span
-								ref={seekTimeRef}
-								className="w-9 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground/40"
-							/>
+				<div className="no-drag relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
+					<div className="relative z-10 flex min-h-0 flex-1">
+						{/* Player column */}
+						<div className="relative flex min-w-0 flex-1 flex-col px-3 pt-3 pb-2">
+							{/* Chrome: fade in while pointer over content (or chrome tooltip open) */}
 							<div
-								ref={seekTrackRef}
 								className={cn(
-									"group relative h-1.5 min-w-0 flex-1 cursor-pointer rounded-full bg-muted/80",
-									!track && "pointer-events-none opacity-40",
+									"no-drag absolute top-2 right-2 z-20 flex items-center gap-0.5 rounded-md bg-background/60 p-0.5 shadow-sm backdrop-blur-sm",
+									"transition-[opacity,transform] duration-200 ease-out",
+									chromeVisible
+										? "pointer-events-auto translate-y-0 opacity-100"
+										: "pointer-events-none -translate-y-0.5 opacity-0",
 								)}
-								onClick={setCurrentTime}
-								onMouseMove={handleSeekHover}
-								onMouseEnter={handleSeekEnter}
-								onMouseLeave={clearSeekHover}
-								role="slider"
-								aria-label="Seek"
-								aria-valuenow={time?.pct ?? 0}
-								aria-valuemin={0}
-								aria-valuemax={100}
-								tabIndex={0}
 							>
-								{/* Played */}
-								<div
-									className="absolute inset-y-0 left-0 rounded-full bg-accent transition-[width] duration-100 ease-out"
-									style={{
-										width: `${time?.pct ?? 0}%`,
-										...(displayAccent ? { backgroundColor: displayAccent } : {}),
-									}}
-								/>
-								{/* Hover preview — imperative width, no transition */}
-								<div
-									ref={seekHoverFillRef}
-									className={cn("absolute inset-y-0 left-0 rounded-full bg-foreground/25", !seekHovering && "hidden")}
-									style={{ width: 0 }}
-								/>
-								{/* Scrubber thumb + tip — follow cursor via refs */}
-								<div
-									ref={seekThumbRef}
-									className={cn(
-										"pointer-events-none absolute top-1/2 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground shadow-sm ring-2 ring-background",
-										!seekHovering && "hidden",
-									)}
-									style={{ left: 0 }}
-								/>
-								<div
-									ref={seekTipRef}
-									className={cn(
-										"pointer-events-none absolute bottom-full z-20 mb-1.5 -translate-x-1/2 rounded-md bg-foreground px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-background shadow-sm",
-										!seekHovering && "hidden",
-									)}
-									style={{ left: 0 }}
-								/>
-							</div>
-							<span className="w-9 shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">{time?.end ?? "0:00"}</span>
-						</div>
-
-						{/* Transport — segmented dock */}
-						<div className="mt-auto flex justify-center pt-2">
-							<div className="flex items-center gap-0.5 rounded-full border border-border/50 bg-background/50 p-1 shadow-sm backdrop-blur-md">
-								{hasLike ? (
-									<PlayerButton
-										active={!!playState?.liked}
-										disabled={trackBusy || !track}
-										aria-label="Like"
-										style={
-											playState?.liked && displayAccent
-												? { color: displayAccent }
-												: undefined
+								<Tooltip disabled={passThrough} onOpenChange={setChromeTooltipOpen}>
+									<TooltipTrigger
+										render={
+											<ChromeButton
+												aria-label={pinned ? "Unpin" : "Pin"}
+												aria-pressed={pinned}
+												data-active={pinned ? "true" : undefined}
+												onPointerDown={(ev) => {
+													if (ev.button !== 0) return;
+													ev.preventDefault();
+													ev.stopPropagation();
+													void handlePinToggle();
+												}}
+												className={cn("no-drag", pinned && "text-foreground bg-accent/20")}
+											>
+												<PinIcon className={cn(pinned && "fill-current")} />
+											</ChromeButton>
 										}
-										onClick={likeToggle}
-									>
-										<LikeIcon />
-									</PlayerButton>
-								) : null}
-								<PlayerButton disabled={trackBusy || !track} aria-label="Previous" onClick={handlePrev}>
-									<PrevIcon />
-								</PlayerButton>
-								<PlayerButton
-									variant="hero"
-									disabled={trackBusy || !track}
-									aria-label={playing ? "Pause" : "Play"}
-									style={
-										displayAccent
-											? {
-													backgroundColor: `color-mix(in oklab, ${displayAccent} 28%, transparent)`,
-													color: displayAccent,
-												}
-											: undefined
-									}
-									onClick={() => void handlePlayPause()}
+									/>
+									<TooltipContent side="bottom">{pinned ? "Unpin" : "Pin"}</TooltipContent>
+								</Tooltip>
+								<Tooltip disabled={passThrough} onOpenChange={setChromeTooltipOpen}>
+									<TooltipTrigger
+										render={
+											<ChromeButton aria-label="Back to app" onClick={() => void openMain()}>
+												<ArrowLeftIcon />
+											</ChromeButton>
+										}
+									/>
+									<TooltipContent side="bottom">Back to app</TooltipContent>
+								</Tooltip>
+								<Tooltip disabled={passThrough} onOpenChange={setChromeTooltipOpen}>
+									<TooltipTrigger
+										render={
+											<ChromeButton aria-label="Settings" onClick={() => void handleSettings()}>
+												<SettingsIcon />
+											</ChromeButton>
+										}
+									/>
+									<TooltipContent side="bottom">Settings</TooltipContent>
+								</Tooltip>
+							</div>
+
+							<div className="flex items-start gap-2.5">
+								<TrayCoverArt src={artSrc} />
+
+								<div className="min-w-0 flex-1 pt-0.5">
+									<p className="truncate text-base leading-tight font-semibold">{title}</p>
+									{artist ? <p className="mt-0.5 truncate text-sm text-muted-foreground">{artist}</p> : null}
+								</div>
+							</div>
+
+							{/* Progress + duration */}
+							<div className="mt-3 flex items-center gap-2">
+								<span
+									ref={seekTimeRef}
+									className="w-9 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground/40"
+								/>
+								<div
+									ref={seekTrackRef}
+									className={cn(
+										"group relative h-1.5 min-w-0 flex-1 rounded-full bg-muted/80",
+										passThrough ? "cursor-default" : "cursor-pointer",
+										!track && "pointer-events-none opacity-40",
+									)}
+									onClick={setCurrentTime}
+									onMouseMove={handleSeekHover}
+									onMouseEnter={handleSeekEnter}
+									onMouseLeave={clearSeekHover}
+									role="slider"
+									aria-label="Seek"
+									aria-valuenow={time?.pct ?? 0}
+									aria-valuemin={0}
+									aria-valuemax={100}
+									tabIndex={0}
 								>
-									{playing ? <PauseIcon /> : <PlayIcon />}
-								</PlayerButton>
-								<PlayerButton disabled={trackBusy || !track} aria-label="Next" onClick={handleNext}>
-									<NextIcon />
-								</PlayerButton>
-								{hasDislike ? (
+									{/* Played */}
+									<div
+										className="absolute inset-y-0 left-0 rounded-full bg-accent transition-[width] duration-100 ease-out"
+										style={{
+											width: `${time?.pct ?? 0}%`,
+											...(displayAccent ? { backgroundColor: displayAccent } : {}),
+										}}
+									/>
+									{/* Hover preview — imperative width, no transition */}
+									<div
+										ref={seekHoverFillRef}
+										className={cn("absolute inset-y-0 left-0 rounded-full bg-foreground/25", seekPreviewHidden && "hidden")}
+										style={{ width: 0 }}
+									/>
+									{/* Scrubber thumb + tip — follow cursor via refs */}
+									<div
+										ref={seekThumbRef}
+										className={cn(
+											"pointer-events-none absolute top-1/2 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground shadow-sm ring-2 ring-background",
+											seekPreviewHidden && "hidden",
+										)}
+										style={{ left: 0 }}
+									/>
+									<div
+										ref={seekTipRef}
+										className={cn(
+											"pointer-events-none absolute bottom-full z-20 mb-1.5 -translate-x-1/2 rounded-md bg-foreground px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-background shadow-sm",
+											seekPreviewHidden && "hidden",
+										)}
+										style={{ left: 0 }}
+									/>
+								</div>
+								<span className="w-9 shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">{time?.end ?? "0:00"}</span>
+							</div>
+
+							{/* Transport — segmented dock */}
+							<div className="mt-auto flex justify-center pt-2">
+								<div className="flex items-center gap-0.5 rounded-full border border-border/50 bg-background/50 p-1 shadow-sm backdrop-blur-md">
+									{hasLike ? (
+										<PlayerButton
+											active={!!playState?.liked}
+											disabled={trackBusy || !track}
+											aria-label="Like"
+											style={
+												playState?.liked && displayAccent
+													? { color: displayAccent }
+													: undefined
+											}
+											onClick={likeToggle}
+										>
+											<LikeIcon />
+										</PlayerButton>
+									) : null}
+									<PlayerButton disabled={trackBusy || !track} aria-label="Previous" onClick={handlePrev}>
+										<PrevIcon />
+									</PlayerButton>
 									<PlayerButton
-										active={!!playState?.disliked}
+										variant="hero"
 										disabled={trackBusy || !track}
-										aria-label="Dislike"
+										aria-label={playing ? "Pause" : "Play"}
 										style={
-											playState?.disliked && displayAccent
-												? { color: displayAccent }
+											displayAccent
+												? {
+														backgroundColor: `color-mix(in oklab, ${displayAccent} 28%, transparent)`,
+														color: displayAccent,
+													}
 												: undefined
 										}
-										onClick={dislikeToggle}
+										onClick={() => void handlePlayPause()}
 									>
-										<LikeIcon className="rotate-180" />
+										{playing ? <PauseIcon /> : <PlayIcon />}
 									</PlayerButton>
-								) : null}
+									<PlayerButton disabled={trackBusy || !track} aria-label="Next" onClick={handleNext}>
+										<NextIcon />
+									</PlayerButton>
+									{hasDislike ? (
+										<PlayerButton
+											active={!!playState?.disliked}
+											disabled={trackBusy || !track}
+											aria-label="Dislike"
+											style={
+												playState?.disliked && displayAccent
+													? { color: displayAccent }
+													: undefined
+											}
+											onClick={dislikeToggle}
+										>
+											<LikeIcon className="rotate-180" />
+										</PlayerButton>
+									) : null}
+								</div>
 							</div>
 						</div>
-					</div>
 
-					{/* Control center column */}
-					<div className="relative z-10 flex w-12 shrink-0 flex-col items-center justify-center gap-1.5 border-l border-border/60 bg-background/40 px-1.5 py-2 backdrop-blur-sm">
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<ControlToggle
-										active={lastFmEnabled}
-										busy={lastFmBusy || lastFMLoading}
-										aria-label={lastFmEnabled ? "Disable Last.fm" : "Enable Last.fm"}
-										onClick={() => void toggleLastFM(!lastFmEnabled)}
-									>
-										<LastFMIcon
-											className={cn(
-												lastFmEnabled && lastFM.error && "text-red-500",
-												lastFmEnabled && lastFM.connected && !lastFM.error && "text-green-500",
-											)}
-										/>
-									</ControlToggle>
-								}
-							/>
-							<TooltipContent side="left">
-								{lastFmEnabled ? (lastFM.name ? `Last.fm · ${lastFM.name}` : "Last.fm on") : "Last.fm off"}
-							</TooltipContent>
-						</Tooltip>
+						{/* Control center column */}
+						<div className="relative z-10 flex w-12 shrink-0 flex-col items-center justify-center gap-1.5 border-l border-border/60 bg-background/40 px-1.5 py-2 backdrop-blur-sm">
+							<Tooltip disabled={passThrough}>
+								<TooltipTrigger
+									render={
+										<ControlToggle
+											active={lastFmEnabled}
+											busy={lastFmBusy || lastFMLoading}
+											aria-label={lastFmEnabled ? "Disable Last.fm" : "Enable Last.fm"}
+											onClick={() => void toggleLastFM(!lastFmEnabled)}
+										>
+											<LastFMIcon
+												className={cn(
+													lastFmEnabled && lastFM.error && "text-red-500",
+													lastFmEnabled && lastFM.connected && !lastFM.error && "text-green-500",
+												)}
+											/>
+										</ControlToggle>
+									}
+								/>
+								<TooltipContent side="left">
+									{lastFmEnabled ? (lastFM.name ? `Last.fm · ${lastFM.name}` : "Last.fm on") : "Last.fm off"}
+								</TooltipContent>
+							</Tooltip>
 
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<ControlToggle
-										active={discordEnabled}
-										busy={discordLoading}
-										aria-label={discordEnabled ? "Disable Discord" : "Enable Discord"}
-										onClick={toggleDiscord}
-									>
-										<DiscordIcon className={cn(discordEnabled && discordError && "text-red-500")} />
-									</ControlToggle>
-								}
-							/>
-							<TooltipContent side="left">
-								{discordError && discordEnabled
-									? `Discord · ${discordError}`
-									: discordEnabled
-										? discordConnected
-											? "Discord on"
-											: "Discord connecting…"
-										: "Discord off"}
-							</TooltipContent>
-						</Tooltip>
+							<Tooltip disabled={passThrough}>
+								<TooltipTrigger
+									render={
+										<ControlToggle
+											active={discordEnabled}
+											busy={discordLoading}
+											aria-label={discordEnabled ? "Disable Discord" : "Enable Discord"}
+											onClick={toggleDiscord}
+										>
+											<DiscordIcon className={cn(discordEnabled && discordError && "text-red-500")} />
+										</ControlToggle>
+									}
+								/>
+								<TooltipContent side="left">
+									{discordError && discordEnabled
+										? `Discord · ${discordError}`
+										: discordEnabled
+											? discordConnected
+												? "Discord on"
+												: "Discord connecting…"
+											: "Discord off"}
+								</TooltipContent>
+							</Tooltip>
 
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<ControlToggle
-										active={apiEnabled}
-										aria-label={apiEnabled ? "Disable Local API" : "Enable Local API"}
-										onClick={() => setApiEnabled((prev) => !prev)}
-									>
-										<ApiIcon />
-									</ControlToggle>
-								}
-							/>
-							<TooltipContent side="left">{apiEnabled ? "Local API on" : "Local API off"}</TooltipContent>
-						</Tooltip>
+							<Tooltip disabled={passThrough}>
+								<TooltipTrigger
+									render={
+										<ControlToggle
+											active={apiEnabled}
+											aria-label={apiEnabled ? "Disable Local API" : "Enable Local API"}
+											onClick={() => setApiEnabled((prev) => !prev)}
+										>
+											<ApiIcon />
+										</ControlToggle>
+									}
+								/>
+								<TooltipContent side="left">{apiEnabled ? "Local API on" : "Local API off"}</TooltipContent>
+							</Tooltip>
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
+		</HoverableContext.Provider>
 	);
 }

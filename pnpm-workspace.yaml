@@ -23,6 +23,7 @@ allowBuilds:
   electron: true
   electron-winstaller: true
   esbuild: true
+  koffi: false
   lefthook: true
   protobufjs: true
   sharp: true

@@ -49,19 +49,19 @@ function TrayViewSettingsPage() {
                                 setOpacityPercent(next);
                             }}
                         />
-                        <FieldDescription>How see-through the tray popup is.</FieldDescription>
+                        <FieldDescription>How see-through the tray popup is. With &quot;Dim only on hover&quot; on, this is the hovered opacity.</FieldDescription>
                     </Field>
                     <SettingsCheckbox
                         configKey="trayView.clickThrough"
                         defaultValue={false}
-                        description="Let clicks pass through the tray popup. Buttons and controls are clickable by holding Alt key."
+                        description="Let clicks pass through the tray popup. Hold Alt while the pointer is over it to use its controls."
                     >
                         Click-through
                     </SettingsCheckbox>
                     <SettingsCheckbox
                         configKey="trayView.applyOpacityOnHover"
                         defaultValue={false}
-                        description="Keeps the tray popup at full opacity normally, and only apply the set opacity from above while your cursor is over it. Works together with click-through as hovering doesn't disable it, hold Alt to click through as usual."
+                        description="Fades the tray popup to the opacity above while the mouse is over it, and back to fully visible when it leaves. Holding Alt keeps it fully visible."
                     >
                         Dim only on hover
                     </SettingsCheckbox>

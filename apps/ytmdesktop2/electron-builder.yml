@@ -18,6 +18,7 @@ files:
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig*.json}"
 asarUnpack:
   - resources/**
+  - "**/node_modules/@koromix/**"
   # electron-vite may hash asset names — match stem; ICNS needs real path (not asar).
   - "**/*favicon*"
   - "**/*32x32*"
