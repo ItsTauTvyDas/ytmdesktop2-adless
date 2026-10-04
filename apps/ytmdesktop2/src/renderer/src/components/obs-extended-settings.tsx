@@ -49,37 +49,13 @@ function ExtendedBadge() {
 	);
 }
 
-const TEXT_FIELDS: ReadonlyArray<{ key: EmbedTextKey; label: string; description: string }> = [
-	{
-		key: "idle",
-		label: "Nothing playing",
-		description: "Replaces the song title whenever no track is loaded. This is what viewers see on a fresh launch, or after you close YouTube Music.",
-	},
-	{
-		key: "artPlaceholder",
-		label: "Artwork placeholder",
-		description: "The small label drawn inside the empty artwork square. Ignored once a custom idle image is set below.",
-	},
-	{
-		key: "connecting",
-		label: "Connecting",
-		description: "Shown for the moment the browser source spends opening its connection to the local API.",
-	},
-	{
-		key: "reconnecting",
-		label: "Reconnecting",
-		description: "Shown after the live connection drops, until it comes back. Retries every 2 seconds.",
-	},
-	{
-		key: "disconnected",
-		label: "Disconnected",
-		description: "Shown when the socket cannot be opened at all, usually because the local API is off.",
-	},
-	{
-		key: "unauthorized",
-		label: "Unauthorized",
-		description: "Shown when the API requires a token and the one in the source URL is missing, wrong, or revoked.",
-	},
+const TEXT_FIELDS: ReadonlyArray<{ key: EmbedTextKey; label: string; description?: string }> = [
+	{ key: "idle", label: "Nothing playing", description: "Replaces the song title when no track is loaded." },
+	{ key: "artPlaceholder", label: "Album art placeholder", description: "Ignored when an idle image is set." },
+	{ key: "connecting", label: "Connecting" },
+	{ key: "reconnecting", label: "Reconnecting", description: "Retries every 2 seconds." },
+	{ key: "disconnected", label: "Disconnected", description: "Usually means the local API is off." },
+	{ key: "unauthorized", label: "Unauthorized", description: "The token in the source URL is missing or invalid." },
 ];
 
 function TextRow({ field }: { field: (typeof TEXT_FIELDS)[number] }) {
@@ -91,7 +67,7 @@ function TextRow({ field }: { field: (typeof TEXT_FIELDS)[number] }) {
 		<Field orientation="horizontal" className="items-start justify-between gap-4">
 			<FieldContent>
 				<FieldLabel htmlFor={id}>{field.label}</FieldLabel>
-				<FieldDescription>{field.description}</FieldDescription>
+				{field.description ? <FieldDescription>{field.description}</FieldDescription> : null}
 			</FieldContent>
 			<div className="flex w-[18rem] shrink-0 flex-col gap-1">
 				<Input
@@ -101,7 +77,7 @@ function TextRow({ field }: { field: (typeof TEXT_FIELDS)[number] }) {
 					spellCheck={false}
 					onChange={(e) => setValue(e.target.value)}
 				/>
-				{hidden ? <span className="text-[10px] text-amber-500">Hidden, contains only whitespace</span> : null}
+				{hidden ? <span className="text-[10px] text-amber-500">Hidden</span> : null}
 			</div>
 		</Field>
 	);
@@ -116,9 +92,7 @@ export function ObsLanguageCard() {
 					<ExtendedBadge />
 				</CardTitle>
 				<CardDescription>
-					Every fixed string the browser source can show. Leave a field <strong>empty</strong> to keep the shipped wording. Type a{" "}
-					<strong>single space</strong> to remove that text from the overlay entirely, which is useful for hiding the idle label or the
-					connection notices on a clean stream layout.
+					Empty field uses default text. A single space hides the text.
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
@@ -132,12 +106,12 @@ export function ObsLanguageCard() {
 	);
 }
 
-const COLOR_FIELDS: ReadonlyArray<{ key: EmbedColorKey; label: string; description: string; swatch: string }> = [
-	{ key: "title", label: "Song title", description: "The track name while something is playing.", swatch: "#f4f4f5" },
-	{ key: "artist", label: "Song artist", description: "The line under the title. Also used for the idle label and the ticker.", swatch: "#8b8b8f" },
-	{ key: "startTime", label: "Elapsed time", description: "The counter on the left of the progress bar.", swatch: "#595960" },
-	{ key: "endTime", label: "Track length", description: "The counter on the right of the progress bar.", swatch: "#8b8b8f" },
-	{ key: "progress", label: "Progress bar", description: "The filled part of the bar.", swatch: "#3b82f6" },
+const COLOR_FIELDS: ReadonlyArray<{ key: EmbedColorKey; label: string; description?: string; swatch: string }> = [
+	{ key: "title", label: "Song title", swatch: "#f4f4f5" },
+	{ key: "artist", label: "Song artist", description: "Also used for the idle label and the ticker.", swatch: "#8b8b8f" },
+	{ key: "startTime", label: "Elapsed time", swatch: "#595960" },
+	{ key: "endTime", label: "Track length", swatch: "#8b8b8f" },
+	{ key: "progress", label: "Progress bar", description: "Only the filled part of the bar.", swatch: "#3b82f6" },
 ];
 
 function isHex(value: string): boolean {
@@ -155,10 +129,7 @@ function ColorRow({ field }: { field: (typeof COLOR_FIELDS)[number] }) {
 		<Field orientation="horizontal" className="items-start justify-between gap-4">
 			<FieldContent>
 				<FieldLabel htmlFor={id}>{field.label}</FieldLabel>
-				<FieldDescription>
-					{field.description}
-					{isDefault ? " Currently using the shipped colour." : null}
-				</FieldDescription>
+				{field.description ? <FieldDescription>{field.description}</FieldDescription> : null}
 			</FieldContent>
 			<div className="flex w-[18rem] shrink-0 flex-col gap-2">
 				{accentCapable ? (
@@ -203,9 +174,8 @@ export function ObsColorsCard() {
 					<ExtendedBadge />
 				</CardTitle>
 				<CardDescription>
-					App themes do not reach the browser source, which renders standalone, so these are the only colours it has. Leave a field empty for
-					the shipped colour, or type any CSS colour (hex, <code className="font-mono text-xs">rgba()</code>, a named colour) if you need
-					transparency the picker cannot express.
+					App themes do not apply to the browser source. Empty field uses the default colour. Any CSS colour works, including{" "}
+					<code className="font-mono text-xs">rgba()</code> for transparency.
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
@@ -228,7 +198,7 @@ function RadiusRow({
 }: {
 	settingKey: "embed" | "art" | "progress";
 	label: string;
-	description: string;
+	description?: string;
 	max: number;
 	fallback: number;
 }) {
@@ -260,7 +230,7 @@ function RadiusRow({
 					setValue(n);
 				}}
 			/>
-			<FieldDescription>{description}</FieldDescription>
+			{description ? <FieldDescription>{description}</FieldDescription> : null}
 		</Field>
 	);
 }
@@ -273,28 +243,25 @@ export function ObsShapeCard() {
 					Shape
 					<ExtendedBadge />
 				</CardTitle>
-				<CardDescription>Corner rounding, from the outside in.</CardDescription>
+				<CardDescription>Corner rounding.</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<FieldGroup>
 					<RadiusRow
 						settingKey="embed"
-						label="Embed rounding"
-						description="The outer corners of the whole overlay. Applies to the default, compact, stack, ticker and badge layouts. The text layout has no frame and fullscreen fills the canvas, so neither is affected."
+						label="Embed card rounding"
 						max={EMBED_RADIUS_MAX.embed}
 						fallback={EMBED_RADIUS_DEFAULTS.embed}
 					/>
 					<RadiusRow
 						settingKey="art"
 						label="Album art rounding"
-						description="0 is a hard square, higher values round the cover. At 32 a 64px cover is a circle."
 						max={EMBED_RADIUS_MAX.art}
 						fallback={EMBED_RADIUS_DEFAULTS.art}
 					/>
 					<RadiusRow
 						settingKey="progress"
 						label="Progress bar rounding"
-						description="0 is a flat bar. The bar is only a few pixels tall, so anything from about 6 up reads as a full pill."
 						max={EMBED_RADIUS_MAX.progress}
 						fallback={EMBED_RADIUS_DEFAULTS.progress}
 					/>
@@ -323,23 +290,17 @@ export function ObsIdleArtCard() {
 		<Card>
 			<CardHeader>
 				<CardTitle>
-					Idle artwork
+					Idle album art
 					<ExtendedBadge />
 				</CardTitle>
-				<CardDescription>
-					With nothing playing, the cover square is a gradient with the artwork placeholder label on top, and there is no image behind it.
-					Set one here to show your own logo instead, and the label is dropped.
-				</CardDescription>
+				<CardDescription>Shown in place of the placeholder label when nothing is playing.</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<FieldGroup>
 					<Field orientation="horizontal" className="items-start justify-between gap-4">
 						<FieldContent>
 							<FieldLabel>Image</FieldLabel>
-							<FieldDescription>
-								Choose a file on this machine, or paste any URL the browser source can reach. Either way it is stored as a URL. A local file
-								is served by the local API, since a browser source cannot load a file path on its own. Square images fit the cover best.
-							</FieldDescription>
+							<FieldDescription>Choose a local file or paste a URL. Square images fit best.</FieldDescription>
 						</FieldContent>
 						<div className="flex w-[18rem] shrink-0 flex-col gap-2">
 							<div className="flex items-center gap-2">
