@@ -263,6 +263,14 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 		this._suppressBlurUntil = Date.now() + ms;
 	}
 
+	private captureMovedPosition() {
+		if (!this._pinned) return;
+		const win = this.getWindow();
+		if (!win || win.isDestroyed()) return;
+		const [x, y] = win.getPosition();
+		this._restoredBounds = { x, y };
+	}
+
 	private dockToTray(win: BrowserWindow) {
 		const tray = this.trayProvider?.Tray;
 		positionNearTray(win, tray && !tray.isDestroyed() ? tray : null, {
@@ -332,8 +340,14 @@ export default class TrayViewProvider extends BaseProvider implements AfterInit,
 			}
 
 			this.applyPinFlags(win);
-			win.on("move", () => this.persistMoved());
-			win.on("moved", () => this.persistMoved());
+			win.on("move", () => {
+				this.captureMovedPosition();
+				this.persistMoved();
+			});
+			win.on("moved", () => {
+				this.captureMovedPosition();
+				this.persistMoved();
+			});
 
 			const dismiss = () => {
 				if (this._pinned) return;
