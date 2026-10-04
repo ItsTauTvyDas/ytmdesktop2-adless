@@ -26,7 +26,18 @@ const KEY = EMBED_EXTENDED_SETTINGS_KEY;
 const TYPING_DEBOUNCE = 400;
 
 export function useExtendedEmbedConfig(): EmbedExtendedConfig {
+	const utils = trpc.useUtils();
 	const [config] = useSettingsState<EmbedExtendedConfig>(KEY, {});
+
+	trpc.settings.onChange.useSubscription(undefined, {
+		onData: (ev) => {
+			const changed = ev?.key;
+			if (typeof changed !== "string") return;
+			if (changed !== KEY && !changed.startsWith(`${KEY}.`)) return;
+			void utils.settings.get.invalidate({ key: KEY, defaultValue: {} });
+		},
+	});
+
 	return config ?? {};
 }
 
